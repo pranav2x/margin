@@ -18,7 +18,7 @@ const LABELS: Record<string, string> = {
   watch: 'watch',
   takes: 'takes',
   call: 'the call',
-  you: 'you',
+  you: 'byline',
 };
 
 interface ItemProps {
