@@ -116,6 +116,8 @@ export interface Clip {
   saves: number;
   shares: number;
   comments: number;
+  photographer?: string;
+  photographerSchool?: string;
 }
 
 export interface PlayByPlay {
