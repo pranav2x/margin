@@ -99,6 +99,10 @@ export default function YouScreen() {
           <StatColumn
             value={user.followingAthletes.length}
             label="FOLLOWING"
+          />
+          <StatColumn
+            value={user.editionStreak}
+            label="STREAK"
             last
           />
         </View>
