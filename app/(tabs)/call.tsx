@@ -14,7 +14,7 @@ import { useCallsStore } from '../../state/calls';
 import { useTheme, space, SCREEN_PADDING } from '../../theme';
 import { recordPct } from '../../lib/utils/format';
 
-export default function PicksScreen() {
+export default function CallScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const record = useCallsStore((s) => s.record);
@@ -55,7 +55,7 @@ export default function PicksScreen() {
             <RollUpNumber value={record.losses} size="xl" />
           </View>
           <MicroLabel style={{ marginTop: space[4] }}>
-            YOUR RECORD · {pct}% · TOP 4%
+            SEASON RECORD · {pct}% · TOP 4%
           </MicroLabel>
           {Object.keys(filed).some((k) => !filed[k].result) && (
             <Pressable
@@ -84,7 +84,7 @@ export default function PicksScreen() {
           }}
         >
           <MicroLabel>TONIGHT</MicroLabel>
-          <MicroLabel>{upcoming.length} GAMES</MicroLabel>
+          <MicroLabel>{upcoming.length} CALLS</MicroLabel>
         </View>
         <HairlineRule />
 

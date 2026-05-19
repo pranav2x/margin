@@ -90,7 +90,7 @@ export default function YouScreen() {
         <View style={{ flexDirection: 'row', marginTop: space[7], paddingHorizontal: SCREEN_PADDING }}>
           <StatColumn
             value={`${record.wins}–${record.losses}`}
-            label="PICKS"
+            label="CALLS"
           />
           <StatColumn
             value={takes.filter((t) => t.author.handle === user.handle).length}
