@@ -6,7 +6,7 @@ import { MastheadBar } from '../../components/composite/MastheadBar';
 import { HairlineRule } from '../../components/primitives/HairlineRule';
 import { Txt } from '../../components/primitives/Text';
 import { MicroLabel } from '../../components/primitives/MicroLabel';
-import { PickCard } from '../../components/composite/PickCard';
+import { CallCard } from '../../components/composite/CallCard';
 import { Score } from '../../components/motion/Score';
 import { RollUpNumber } from '../../components/motion/RollUpNumber';
 import { games } from '../../data/fixtures/games';
@@ -90,7 +90,7 @@ export default function PicksScreen() {
 
         {upcoming.map((g, i) => (
           <View key={g.id}>
-            <PickCard game={g} />
+            <CallCard game={g} />
             {i < upcoming.length - 1 && <View style={{ height: space[3] }} />}
           </View>
         ))}

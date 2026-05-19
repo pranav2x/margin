@@ -12,13 +12,13 @@ interface Props {
   game: Game;
 }
 
-function lockedTimeFormat(iso: string): string {
+function filedTimeFormat(iso: string): string {
   const d = new Date(iso);
   const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  return `LOCKED ${time}`;
+  return `FILED ${time}`;
 }
 
-export function PickCard({ game }: Props) {
+export function CallCard({ game }: Props) {
   const { colors } = useTheme();
   const filed = useCallsStore((s) => s.filed[game.id]);
   const fileCall = useCallsStore((s) => s.fileCall);
@@ -98,7 +98,7 @@ export function PickCard({ game }: Props) {
         </Txt>
         {filed && (
           <MicroLabel style={{ marginTop: space[3] }}>
-            {lockedTimeFormat(filed.filedAt)}
+            {filedTimeFormat(filed.filedAt)}
           </MicroLabel>
         )}
       </View>
