@@ -10,16 +10,16 @@ import { PickCard } from '../../components/composite/PickCard';
 import { Score } from '../../components/motion/Score';
 import { RollUpNumber } from '../../components/motion/RollUpNumber';
 import { games } from '../../data/fixtures/games';
-import { usePicksStore } from '../../state/picks';
+import { useCallsStore } from '../../state/calls';
 import { useTheme, space, SCREEN_PADDING } from '../../theme';
 import { recordPct } from '../../lib/utils/format';
 
 export default function PicksScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const record = usePicksStore((s) => s.record);
-  const locked = usePicksStore((s) => s.locked);
-  const settle = usePicksStore((s) => s.settleAllRandom);
+  const record = useCallsStore((s) => s.record);
+  const filed = useCallsStore((s) => s.filed);
+  const settle = useCallsStore((s) => s.settleAllRandom);
 
   const upcoming = useMemo(
     () => games.filter((g) => g.status === 'scheduled'),
@@ -57,7 +57,7 @@ export default function PicksScreen() {
           <MicroLabel style={{ marginTop: space[4] }}>
             YOUR RECORD · {pct}% · TOP 4%
           </MicroLabel>
-          {Object.keys(locked).some((k) => !locked[k].result) && (
+          {Object.keys(filed).some((k) => !filed[k].result) && (
             <Pressable
               onPress={settle}
               style={{
