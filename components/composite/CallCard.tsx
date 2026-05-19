@@ -8,6 +8,8 @@ import type { Game } from '../../types';
 import { formatGameTime } from '../../lib/utils/format';
 import { useCallsStore } from '../../state/calls';
 
+const CONFIDENCE_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
+
 interface Props {
   game: Game;
 }
@@ -22,10 +24,16 @@ export function CallCard({ game }: Props) {
   const { colors } = useTheme();
   const filed = useCallsStore((s) => s.filed[game.id]);
   const fileCall = useCallsStore((s) => s.fileCall);
+  const setCallConfidence = useCallsStore((s) => s.setCallConfidence);
 
   const pick = (teamId: string) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     fileCall(game.id, teamId);
+  };
+
+  const setConfidence = (n: number) => {
+    Haptics.selectionAsync();
+    setCallConfidence(game.id, n);
   };
 
   const renderTeamButton = (teamId: string, teamName: string, record?: string) => {
@@ -118,6 +126,60 @@ export function CallCard({ game }: Props) {
           game.home.team.record,
         )}
       </View>
+
+      {filed && !filed.result && (
+        <>
+          <HairlineRule />
+          {/* numbers 1-10 should each be used at most once per week; uniqueness enforcement is a follow-up task */}
+          <View
+            style={{
+              paddingHorizontal: SCREEN_PADDING,
+              paddingTop: space[4],
+              paddingBottom: space[5],
+            }}
+          >
+            <MicroLabel>CONFIDENCE</MicroLabel>
+            <View
+              style={{
+                flexDirection: 'row',
+                marginTop: space[3],
+                gap: space[1],
+              }}
+            >
+              {CONFIDENCE_VALUES.map((n) => {
+                const isSelected = filed.confidence === n;
+                return (
+                  <Pressable
+                    key={n}
+                    onPress={() => setConfidence(n)}
+                    hitSlop={4}
+                    style={{
+                      flex: 1,
+                      aspectRatio: 1,
+                      borderWidth: isSelected ? 0 : 1,
+                      borderColor: colors.fog,
+                      backgroundColor: isSelected ? colors.ink : 'transparent',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Txt
+                      style={{
+                        fontFamily: fonts.mono,
+                        fontSize: 13,
+                        lineHeight: 16,
+                        color: isSelected ? colors.paper : colors.ink,
+                      }}
+                    >
+                      {n}
+                    </Txt>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        </>
+      )}
 
       <HairlineRule />
     </View>
