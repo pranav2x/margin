@@ -87,7 +87,13 @@ export default function YouScreen() {
           </Txt>
         </View>
 
-        <View style={{ flexDirection: 'row', marginTop: space[7], paddingHorizontal: SCREEN_PADDING }}>
+        <View style={{ paddingHorizontal: SCREEN_PADDING, marginTop: space[5] }}>
+          <MicroLabel>
+            BYLINE · CLASS OF {user.gradYear} · {user.school.toUpperCase()}
+          </MicroLabel>
+        </View>
+
+        <View style={{ flexDirection: 'row', marginTop: space[6], paddingHorizontal: SCREEN_PADDING }}>
           <StatColumn
             value={`${record.wins}–${record.losses}`}
             label="CALLS"

@@ -9,6 +9,8 @@ interface UserState {
   followingSports: Sport[];
   editionStreak: number;
   streakFreezesRemaining: number;
+  gradYear: number;
+  school: string;
   follow: (athleteId: ID) => void;
   unfollow: (athleteId: ID) => void;
   toggleFollow: (athleteId: ID) => void;
@@ -27,6 +29,8 @@ export const useUserStore = create<UserState>((set, get) => ({
   followingSports: ['NBA', 'WNBA'],
   editionStreak: 7,
   streakFreezesRemaining: 1,
+  gradYear: 2027,
+  school: 'Lincoln HS',
   follow: (id) =>
     set((s) =>
       s.followingAthletes.includes(id)
