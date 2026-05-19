@@ -17,7 +17,7 @@ const LABELS: Record<string, string> = {
   index: 'today',
   watch: 'watch',
   takes: 'takes',
-  picks: 'the call',
+  call: 'the call',
   you: 'you',
 };
 
