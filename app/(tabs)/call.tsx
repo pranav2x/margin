@@ -10,7 +10,7 @@ import { CallCard } from '../../components/composite/CallCard';
 import { Score } from '../../components/motion/Score';
 import { RollUpNumber } from '../../components/motion/RollUpNumber';
 import { games } from '../../data/fixtures/games';
-import { useCallsStore } from '../../state/calls';
+import { useCallsStore, weeklyScore } from '../../state/calls';
 import { useTheme, space, SCREEN_PADDING } from '../../theme';
 import { recordPct } from '../../lib/utils/format';
 
@@ -20,6 +20,7 @@ export default function CallScreen() {
   const record = useCallsStore((s) => s.record);
   const filed = useCallsStore((s) => s.filed);
   const settle = useCallsStore((s) => s.settleAllRandom);
+  const week = useCallsStore(weeklyScore);
 
   const upcoming = useMemo(
     () => games.filter((g) => g.status === 'scheduled'),
@@ -56,6 +57,9 @@ export default function CallScreen() {
           </View>
           <MicroLabel style={{ marginTop: space[4] }}>
             SEASON RECORD · {pct}% · TOP 4%
+          </MicroLabel>
+          <MicroLabel style={{ marginTop: space[2] }}>
+            THIS WEEK · {week === 0 ? '—' : week} PTS
           </MicroLabel>
           {Object.keys(filed).some((k) => !filed[k].result) && (
             <Pressable

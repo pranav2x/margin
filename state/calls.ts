@@ -1,6 +1,21 @@
 import { create } from 'zustand';
 import type { ID } from '../types';
 
+interface CallsSnapshot {
+  filed: Record<ID, FiledCall>;
+}
+
+export function weeklyScore(state: CallsSnapshot): number {
+  let total = 0;
+  for (const k of Object.keys(state.filed)) {
+    const call = state.filed[k];
+    if (call.result === 'win' && typeof call.confidence === 'number') {
+      total += call.confidence;
+    }
+  }
+  return total;
+}
+
 export interface FiledCall {
   gameId: ID;
   selection: ID;
