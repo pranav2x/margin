@@ -19,8 +19,16 @@ import { usePreferencesStore } from '../../state/preferences';
 import { athleteById } from '../../data/fixtures/athletes';
 import { useTheme, space, SCREEN_PADDING } from '../../theme';
 
-type SettingKey = 'notifications' | 'sports' | 'appearance' | 'signout';
+type SettingKey =
+  | 'comments'
+  | 'crossSchoolDms'
+  | 'notifications'
+  | 'sports'
+  | 'appearance'
+  | 'signout';
 const SETTINGS: { key: SettingKey; label: string }[] = [
+  { key: 'comments', label: 'Comments on my posts' },
+  { key: 'crossSchoolDms', label: 'Cross-school messages' },
   { key: 'notifications', label: 'Notifications' },
   { key: 'sports', label: 'Sport preferences' },
   { key: 'appearance', label: 'Appearance' },
@@ -55,10 +63,24 @@ export default function YouScreen() {
   const takes = useTakesStore((s) => s.takes);
   const themePref = usePreferencesStore((s) => s.themePreference);
   const setThemePref = usePreferencesStore((s) => s.setThemePreference);
+  const commentsEnabled = usePreferencesStore((s) => s.commentsEnabled);
+  const setCommentsEnabled = usePreferencesStore((s) => s.setCommentsEnabled);
+  const crossSchoolDmsEnabled = usePreferencesStore((s) => s.crossSchoolDmsEnabled);
+  const setCrossSchoolDmsEnabled = usePreferencesStore((s) => s.setCrossSchoolDmsEnabled);
 
   const cycleTheme = () => {
     Haptics.selectionAsync();
     setThemePref(themePref === 'system' ? 'light' : themePref === 'light' ? 'dark' : 'system');
+  };
+
+  const toggleComments = () => {
+    Haptics.selectionAsync();
+    setCommentsEnabled(!commentsEnabled);
+  };
+
+  const toggleCrossSchoolDms = () => {
+    Haptics.selectionAsync();
+    setCrossSchoolDmsEnabled(!crossSchoolDmsEnabled);
   };
 
   const followed = user.followingAthletes
@@ -155,18 +177,38 @@ export default function YouScreen() {
         </View>
 
         {SETTINGS.map((s, i) => {
-          const trailing =
-            s.key === 'appearance' ? (
+          let trailing: React.ReactNode;
+          if (s.key === 'appearance') {
+            trailing = (
               <Txt variant="bodySm" tone="ash" italic style={{ fontFamily: 'InstrumentSerifItalic' }}>
                 {themePref}
               </Txt>
-            ) : (
-              <ChevronRight size={18} color={colors.ash} strokeWidth={1.25} />
             );
+          } else if (s.key === 'comments') {
+            trailing = (
+              <Txt variant="bodySm" tone="ash" italic style={{ fontFamily: 'InstrumentSerifItalic' }}>
+                {commentsEnabled ? 'on' : 'off'}
+              </Txt>
+            );
+          } else if (s.key === 'crossSchoolDms') {
+            trailing = (
+              <Txt variant="bodySm" tone="ash" italic style={{ fontFamily: 'InstrumentSerifItalic' }}>
+                {crossSchoolDmsEnabled ? 'on' : 'off'}
+              </Txt>
+            );
+          } else {
+            trailing = <ChevronRight size={18} color={colors.ash} strokeWidth={1.25} />;
+          }
+
+          let onPress: (() => void) | undefined;
+          if (s.key === 'appearance') onPress = cycleTheme;
+          else if (s.key === 'comments') onPress = toggleComments;
+          else if (s.key === 'crossSchoolDms') onPress = toggleCrossSchoolDms;
+
           return (
             <View key={s.key}>
               <Pressable
-                onPress={s.key === 'appearance' ? cycleTheme : undefined}
+                onPress={onPress}
                 style={{
                   paddingHorizontal: SCREEN_PADDING,
                   paddingVertical: space[5],
