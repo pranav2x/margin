@@ -1,0 +1,102 @@
+import 'react-native-gesture-handler';
+import { useEffect } from 'react';
+import { StatusBar } from 'expo-status-bar';
+import { Stack } from 'expo-router';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { View } from 'react-native';
+
+import {
+  InstrumentSerif_400Regular,
+  InstrumentSerif_400Regular_Italic,
+} from '@expo-google-fonts/instrument-serif';
+import {
+  Geist_400Regular,
+  Geist_500Medium,
+  Geist_600SemiBold,
+} from '@expo-google-fonts/geist';
+import {
+  GeistMono_400Regular,
+  GeistMono_500Medium,
+} from '@expo-google-fonts/geist-mono';
+
+import { useTheme } from '../theme';
+
+SplashScreen.preventAutoHideAsync().catch(() => undefined);
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    InstrumentSerif: InstrumentSerif_400Regular,
+    InstrumentSerifItalic: InstrumentSerif_400Regular_Italic,
+    Geist: Geist_400Regular,
+    GeistMedium: Geist_500Medium,
+    GeistSemibold: Geist_600SemiBold,
+    GeistMono: GeistMono_400Regular,
+    GeistMonoMedium: GeistMono_500Medium,
+  });
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync().catch(() => undefined);
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) return null;
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <ThemedRoot />
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
+  );
+}
+
+function ThemedRoot() {
+  const { colors, isDark } = useTheme();
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.paper }}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <Stack
+        initialRouteName="(tabs)"
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.paper },
+          animation: 'slide_from_bottom',
+          animationDuration: 320,
+        }}
+      >
+        <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+        <Stack.Screen
+          name="story/[id]"
+          options={{ animation: 'slide_from_bottom', presentation: 'card' }}
+        />
+        <Stack.Screen
+          name="game/[id]"
+          options={{ animation: 'slide_from_bottom', presentation: 'card' }}
+        />
+        <Stack.Screen
+          name="athlete/[id]"
+          options={{ animation: 'slide_from_bottom', presentation: 'card' }}
+        />
+        <Stack.Screen name="onboarding/index" options={{ animation: 'fade' }} />
+        <Stack.Screen name="splash" options={{ animation: 'fade' }} />
+      </Stack>
+    </View>
+  );
+}
