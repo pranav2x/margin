@@ -12,6 +12,7 @@ import { PrimaryButton } from '../../components/primitives/PrimaryButton';
 import { useUserStore } from '../../state/user';
 import { athletes } from '../../data/fixtures/athletes';
 import { useTheme, space, SCREEN_PADDING } from '../../theme';
+import { supabase } from '../../lib/supabase';
 import type { Sport } from '../../types';
 
 const SPORTS: Sport[] = ['NBA', 'WNBA', 'NFL', 'MLB', 'NHL', 'SOCCER', 'CFB', 'F1'];
@@ -27,20 +28,58 @@ export default function Onboarding() {
 
   const [step, setStep] = useState(0);
   const [picked, setPicked] = useState<Sport[]>(['NBA', 'WNBA']);
+  const [saving, setSaving] = useState(false);
 
   const togglePicked = (s: Sport) => {
     Haptics.selectionAsync();
     setPicked((p) => (p.includes(s) ? p.filter((x) => x !== s) : [...p, s]));
   };
 
-  const next = () => {
+  const next = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (step === 1) setSports(picked);
-    if (step < 2) setStep(step + 1);
-    else router.replace('/(tabs)');
+
+    if (step < 2) {
+      setStep(step + 1);
+    } else {
+      // Final step — persist to Supabase then navigate
+      setSaving(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          // Save sports + onboarded flag
+          await supabase
+            .from('profiles')
+            .update({ following_sports: picked, onboarded: true })
+            .eq('id', user.id);
+
+          // Save athlete follows
+          if (followingAthletes.length > 0) {
+            await supabase.from('follows').upsert(
+              followingAthletes.map((athleteId) => ({
+                user_id: user.id,
+                athlete_id: athleteId,
+              })),
+              { onConflict: 'user_id,athlete_id' },
+            );
+          }
+        }
+      } catch {
+        // Best-effort — user can fix later in settings
+      } finally {
+        setSaving(false);
+      }
+      router.replace('/(tabs)');
+    }
   };
 
   const skip = () => {
+    // Skip also marks onboarded so user doesn't loop
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        supabase.from('profiles').update({ onboarded: true }).eq('id', user.id);
+      }
+    });
     router.replace('/(tabs)');
   };
 
@@ -72,7 +111,7 @@ export default function Onboarding() {
         <View style={{ flex: 1, paddingHorizontal: SCREEN_PADDING, paddingTop: space[7] }}>
           <Txt variant="display3">Pick your sports.</Txt>
           <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
-            We’ll keep the feed honest about it.
+            We'll keep the feed honest about it.
           </Txt>
 
           <View
@@ -190,7 +229,7 @@ export default function Onboarding() {
           </ScrollView>
 
           <View style={{ position: 'absolute', left: SCREEN_PADDING, right: SCREEN_PADDING, bottom: insets.bottom + space[5] }}>
-            <PrimaryButton label="DONE" full onPress={next} />
+            <PrimaryButton label={saving ? 'SAVING...' : 'DONE'} full onPress={next} disabled={saving} />
           </View>
         </View>
       )}

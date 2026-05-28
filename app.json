@@ -42,7 +42,9 @@
           "image": "./assets/splash-icon.png",
           "resizeMode": "contain"
         }
-      ]
+      ],
+      "expo-apple-authentication",
+      "@react-native-google-signin/google-signin"
     ],
     "experiments": {
       "typedRoutes": true
