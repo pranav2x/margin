@@ -15,7 +15,8 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.margin.app"
+      "bundleIdentifier": "com.margin.app",
+      "deploymentTarget": "16.4"
     },
     "android": {
       "adaptiveIcon": {
@@ -44,7 +45,12 @@
         }
       ],
       "expo-apple-authentication",
-      "@react-native-google-signin/google-signin"
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.407572513608-9km3b763ht7oh44lfhau11t07gc9ivvl"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

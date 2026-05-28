@@ -7,9 +7,21 @@
  */
 
 import { Platform } from 'react-native';
+import { sha256 } from 'js-sha256';
 import { supabase } from './supabase';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+
+// ── Nonce (pure JS — no native module) ─────────────────────
+
+function generateRawNonce(length = 32): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
 
 // ── Google ──────────────────────────────────────────────────
 
@@ -19,8 +31,14 @@ GoogleSignin.configure({
 });
 
 export async function signInWithGoogle() {
+  // Clear any cached Google session to ensure a fresh ID token
+  try { await GoogleSignin.signOut(); } catch {}
+
+  const rawNonce = generateRawNonce();
+  const hashedNonce = sha256(rawNonce);
+
   await GoogleSignin.hasPlayServices();
-  const response = await GoogleSignin.signIn();
+  const response = await GoogleSignin.signIn({ nonce: hashedNonce });
 
   if (!response.data?.idToken) {
     throw new Error('Google sign-in failed — no ID token returned.');
@@ -29,6 +47,7 @@ export async function signInWithGoogle() {
   const { data, error } = await supabase.auth.signInWithIdToken({
     provider: 'google',
     token: response.data.idToken,
+    nonce: rawNonce,
   });
 
   if (error) throw error;
