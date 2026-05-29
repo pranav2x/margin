@@ -85,6 +85,12 @@ export async function signInWithGoogle() {
   await GoogleSignin.hasPlayServices();
   const response = await GoogleSignin.signIn();
 
+  console.log('[GOOGLE DEBUG]', JSON.stringify(response));
+
+  if (response.type !== 'success') {
+    throw new Error('Google sign-in was cancelled or did not complete.');
+  }
+
   const idToken = response.data?.idToken;
   if (!idToken) {
     throw new Error('Google sign-in failed — no ID token returned.');

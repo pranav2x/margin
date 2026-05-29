@@ -102,7 +102,12 @@ export default function SignIn() {
           )}
 
           {error && (
-            <Txt variant="bodySm" tone="ash" accessibilityLiveRegion="polite">
+            <Txt
+              variant="bodySm"
+              tone="ink"
+              style={{ color: '#C0392B' }}
+              accessibilityLiveRegion="polite"
+            >
               {error}
             </Txt>
           )}
