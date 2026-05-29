@@ -7,20 +7,27 @@
  */
 
 import { Platform } from 'react-native';
-import { sha256 } from 'js-sha256';
 import { supabase } from './supabase';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
-// ── Nonce (pure JS — no native module) ─────────────────────
-
-function generateRawNonce(length = 32): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+// ── [NONCE DEBUG] temporary diagnostics — REMOVE AFTER DEBUGGING ──
+// Decodes a JWT's middle segment (base64url) → JSON. Never throws.
+function __decodeJwtPayload(token: string): any {
+  try {
+    const seg = token.split('.')[1];
+    if (!seg) return { __decodeError: 'no payload segment' };
+    let b64 = seg.replace(/-/g, '+').replace(/_/g, '/');
+    const pad = b64.length % 4;
+    if (pad) b64 += '='.repeat(4 - pad);
+    const bin = typeof atob === 'function' ? atob(b64) : '';
+    // handle UTF-8
+    let json = bin;
+    try { json = decodeURIComponent(escape(bin)); } catch {}
+    return JSON.parse(json);
+  } catch (e) {
+    return { __decodeError: String(e) };
   }
-  return result;
 }
 
 // ── Google ──────────────────────────────────────────────────
@@ -34,23 +41,32 @@ export async function signInWithGoogle() {
   // Clear any cached Google session to ensure a fresh ID token
   try { await GoogleSignin.signOut(); } catch {}
 
-  const rawNonce = generateRawNonce();
-  const hashedNonce = sha256(rawNonce);
+  console.log('[NONCE DEBUG] ===== PROVIDER: GOOGLE path ran =====');
 
   await GoogleSignin.hasPlayServices();
-  const response = await GoogleSignin.signIn({ nonce: hashedNonce });
+  const response = await GoogleSignin.signIn();
 
   if (!response.data?.idToken) {
     throw new Error('Google sign-in failed — no ID token returned.');
   }
 
+  // [NONCE DEBUG] decode the returned ID token payload
+  const __payload = __decodeJwtPayload(response.data.idToken);
+  console.log('[NONCE DEBUG] FULL ID-TOKEN PAYLOAD:', JSON.stringify(__payload));
+  console.log('[NONCE DEBUG] payload.nonce:', __payload?.nonce);
+  console.log('[NONCE DEBUG] payload.aud:', __payload?.aud);
+  console.log('[NONCE DEBUG] payload.iss:', __payload?.iss);
+
   const { data, error } = await supabase.auth.signInWithIdToken({
     provider: 'google',
     token: response.data.idToken,
-    nonce: rawNonce,
   });
 
-  if (error) throw error;
+  if (error) {
+    console.log('[NONCE DEBUG] signInWithIdToken (google) FULL ERROR:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    console.log('[NONCE DEBUG] error.message:', (error as any)?.message, '| error.code:', (error as any)?.code, '| error.status:', (error as any)?.status);
+    throw error;
+  }
   return data;
 }
 
@@ -68,16 +84,30 @@ export async function signInWithApple() {
     ],
   });
 
+  console.log('[NONCE DEBUG] ===== PROVIDER: APPLE path ran =====');
+  console.log('[NONCE DEBUG] NOTE: Apple path generates NO rawNonce and sends NO nonce to signInWithIdToken.');
+
   if (!credential.identityToken) {
     throw new Error('Apple sign-in failed — no identity token returned.');
   }
+
+  // [NONCE DEBUG] decode the returned identity token payload
+  const __applePayload = __decodeJwtPayload(credential.identityToken);
+  console.log('[NONCE DEBUG] FULL IDENTITY-TOKEN PAYLOAD:', JSON.stringify(__applePayload));
+  console.log('[NONCE DEBUG] payload.nonce:', __applePayload?.nonce);
+  console.log('[NONCE DEBUG] payload.aud:', __applePayload?.aud);
+  console.log('[NONCE DEBUG] payload.iss:', __applePayload?.iss);
 
   const { data, error } = await supabase.auth.signInWithIdToken({
     provider: 'apple',
     token: credential.identityToken,
   });
 
-  if (error) throw error;
+  if (error) {
+    console.log('[NONCE DEBUG] signInWithIdToken (apple) FULL ERROR:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    console.log('[NONCE DEBUG] error.message:', (error as any)?.message, '| error.code:', (error as any)?.code, '| error.status:', (error as any)?.status);
+    throw error;
+  }
 
   // Apple only sends the name on the FIRST sign-in — persist it to the profile
   if (credential.fullName?.givenName) {
