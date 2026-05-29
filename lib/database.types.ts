@@ -341,12 +341,56 @@ export type Database = {
         }
         Relationships: []
       }
+      verification_requests: {
+        Row: {
+          created_at: string
+          id: string
+          method: string
+          requester_id: string
+          stat_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          method: string
+          requester_id: string
+          stat_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          method?: string
+          requester_id?: string
+          stat_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verification_requests_stat_id_fkey"
+            columns: ["stat_id"]
+            isOneToOne: false
+            referencedRelation: "player_stats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      nearby_schools: {
+        Args: { p_lat: number; p_limit?: number; p_lng: number }
+        Returns: {
+          city: string
+          distance_km: number
+          id: string
+          name: string
+          state: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
