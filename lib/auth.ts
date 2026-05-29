@@ -84,7 +84,7 @@ export async function signInWithGoogle() {
 
   // Build the Google OAuth URL via Supabase (handles client_id, redirect, etc.)
   const redirectUri = AuthSession.makeRedirectUri(
-    isExpoGo ? { scheme: 'exp+margin' } : { scheme: 'margin' }
+    isExpoGo ? {} : { scheme: 'margin' }
   );
 
   const { data: oauthData, error: oauthError } = await supabase.auth.signInWithOAuth({
