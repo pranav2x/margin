@@ -1,7 +1,12 @@
 import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
+
+// On web we use a full-page redirect OAuth flow, so the Supabase client must
+// detect and exchange the PKCE code in the callback URL. On native this stays
+// disabled because deep-link callbacks are handled explicitly.
+const isWeb = Platform.OS === 'web';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -17,7 +22,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storage: AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    detectSessionInUrl: isWeb,
     flowType: 'pkce',
   },
 });
