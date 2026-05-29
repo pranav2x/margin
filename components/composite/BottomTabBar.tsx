@@ -14,11 +14,9 @@ import { fonts, useTheme, space } from '../../theme';
 import { HairlineRule } from '../primitives/HairlineRule';
 
 const LABELS: Record<string, string> = {
-  index: 'today',
-  watch: 'watch',
-  takes: 'takes',
-  call: 'the call',
-  you: 'byline',
+  index: 'boards',
+  battles: 'battles',
+  you: 'you',
 };
 
 interface ItemProps {

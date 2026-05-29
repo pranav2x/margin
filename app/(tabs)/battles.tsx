@@ -5,7 +5,7 @@ import { Txt } from '../../components/primitives/Text';
 import { MicroLabel } from '../../components/primitives/MicroLabel';
 import { useTheme, space, SCREEN_PADDING } from '../../theme';
 
-export default function YouScreen() {
+export default function BattlesScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -18,12 +18,12 @@ export default function YouScreen() {
         paddingHorizontal: SCREEN_PADDING,
       }}
     >
-      <MicroLabel>YOUR PROFILE</MicroLabel>
+      <MicroLabel>HEAD-TO-HEAD</MicroLabel>
       <Txt variant="display2" style={{ marginTop: space[3] }}>
-        You
+        Battles
       </Txt>
       <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[4] }}>
-        Your stats, sports, and settings live here.
+        Compare athletes side by side here.
       </Txt>
     </View>
   );

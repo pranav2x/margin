@@ -9,10 +9,8 @@ import { MicroLabel } from '../../components/primitives/MicroLabel';
 import { HairlineRule } from '../../components/primitives/HairlineRule';
 import { Avatar } from '../../components/primitives/Avatar';
 import { Score } from '../../components/motion/Score';
-import { StoryCard } from '../../components/composite/EditorialCard';
 
 import { athleteById } from '../../data/fixtures/athletes';
-import { stories } from '../../data/fixtures/stories';
 import { useUserStore } from '../../state/user';
 import { useTheme, space, SCREEN_PADDING } from '../../theme';
 
@@ -33,8 +31,6 @@ export default function AthletePage() {
       </View>
     );
   }
-
-  const related = stories.filter((s) => s.athleteId === athlete.id || s.tags.includes(athlete.sport));
 
   const vitals: { label: string; value: string | number }[] = [];
   if (athlete.stats.ppg) vitals.push({ label: 'PPG', value: athlete.stats.ppg });
@@ -182,21 +178,6 @@ export default function AthletePage() {
                   </View>
                 </View>
                 {i < (athlete.recent?.length ?? 0) - 1 && <HairlineRule />}
-              </View>
-            ))}
-          </>
-        )}
-
-        {related.length > 0 && (
-          <>
-            <HairlineRule style={{ marginTop: space[7] }} />
-            <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[6] }}>
-              <MicroLabel>STORIES</MicroLabel>
-            </View>
-            {related.map((s, i) => (
-              <View key={s.id}>
-                <StoryCard story={s} />
-                {i < related.length - 1 && <HairlineRule />}
               </View>
             ))}
           </>
