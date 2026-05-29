@@ -115,6 +115,8 @@ async function signInWithGoogleWeb() {
   if (error) throw error;
   if (!data?.url) throw new Error('Google sign-in failed — no OAuth URL returned.');
 
+  console.log('[GOOGLE OAUTH] full authorize url:', data.url);
+
   const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
   if (result.type === 'cancel' || result.type === 'dismiss') {
     throw new Error('Google sign-in was cancelled.');
