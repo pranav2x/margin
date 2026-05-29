@@ -3,8 +3,9 @@
  *
  *  - Email one-time code: pure API calls (signInWithOtp / verifyOtp). Works
  *    EVERYWHERE, including Expo Go — no native module and no OAuth redirect.
- *  - Google: native Google Sign-In SDK, only available in a development build
- *    (`npx expo run:ios` or an EAS dev/standalone build), NOT Expo Go.
+ *  - Google: expo-auth-session + expo-web-browser OAuth flow. We generate and
+ *    control the nonce on both sides, so Supabase nonce verification succeeds.
+ *    Only available in a development build, NOT Expo Go.
  *  - Apple: native Apple Authentication module (dev/standalone build).
  *  - Web: Supabase full-page browser-redirect OAuth.
  */
@@ -12,8 +13,14 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { sha256 } from 'js-sha256';
+import * as Linking from 'expo-linking';
+import * as AuthSession from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
 import { supabase } from './supabase';
 import * as AppleAuthentication from 'expo-apple-authentication';
+
+// Required by expo-auth-session on iOS to complete the auth session
+WebBrowser.maybeCompleteAuthSession();
 
 export const isExpoGo = Constants.appOwnership === 'expo';
 
@@ -49,11 +56,10 @@ export async function verifyEmailOtp(email: string, token: string) {
   return data;
 }
 
-// ── Google (native dev build) ────────────────────────────────
+// ── Google (native dev build via expo-auth-session) ──────────
 
-// @react-native-google-signin/google-signin is a native module that is absent
-// from Expo Go, so it is required lazily and configured once on first use. We
-// never reach this code in Expo Go (signInWithGoogle throws earlier).
+// @react-native-google-signin/google-signin is kept here in case it is
+// referenced elsewhere, but the main flow no longer uses it.
 let _googleSignin: typeof import('@react-native-google-signin/google-signin').GoogleSignin | null =
   null;
 
@@ -74,53 +80,65 @@ export async function signInWithGoogle() {
     return signInWithGoogleBrowserRedirect();
   }
 
-  // Google OAuth cannot complete inside Expo Go: the native SDK isn't bundled
-  // there, and the browser-redirect fallback is rejected by Google because
-  // there is no valid redirect URI (the Expo auth proxy has been retired). A
-  // development build is the only supported path on device.
   if (isExpoGo) {
     throw new Error(
-      'Google sign-in needs a development build — it can’t run in Expo Go. ' +
-        'Run “npx expo run:ios” (or install an EAS dev build) and open the app from there.',
+      "Google sign-in needs a development build — it can't run in Expo Go.",
     );
   }
 
-  const GoogleSignin = getGoogleSignin();
-
-  // Generate a nonce so Supabase can verify the Google ID token's nonce claim.
-  // The Google SDK receives the SHA-256 hash; Supabase receives the raw value.
+  // Generate nonce — we control both sides so Supabase verification succeeds.
   const rawNonce = generateRawNonce();
   const hashedNonce = sha256(rawNonce);
 
-  // Clear any cached Google session so we always get a fresh ID token.
-  try {
-    await GoogleSignin.signOut();
-  } catch {}
+  // Build the Google OAuth URL via Supabase (handles client_id, redirect, etc.)
+  const redirectUri = AuthSession.makeRedirectUri({ scheme: 'margin' });
 
-  await GoogleSignin.hasPlayServices();
-  // @ts-expect-error nonce is not in the v16 public types but is accepted by the
-  // underlying native module and forwarded to the iOS GID SDK.
-  const response = await GoogleSignin.signIn({ nonce: hashedNonce });
+  const { data: oauthData, error: oauthError } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: redirectUri,
+      skipBrowserRedirect: true,
+      queryParams: {
+        nonce: hashedNonce,
+      },
+    },
+  });
 
-  console.log('[GOOGLE DEBUG]', JSON.stringify(response));
+  if (oauthError || !oauthData?.url) {
+    throw oauthError ?? new Error('Failed to get Google OAuth URL');
+  }
 
-  if (response.type !== 'success') {
+  const result = await WebBrowser.openAuthSessionAsync(oauthData.url, redirectUri);
+
+  if (result.type !== 'success') {
     throw new Error('Google sign-in was cancelled or did not complete.');
   }
 
-  const idToken = response.data?.idToken;
-  if (!idToken) {
-    throw new Error('Google sign-in failed — no ID token returned.');
+  // Use expo-linking to parse the redirect URL (works reliably with Hermes)
+  const parsed = Linking.parse(result.url);
+  const params = (parsed.queryParams ?? {}) as Record<string, string>;
+
+  const accessToken = params['access_token'];
+  const refreshToken = params['refresh_token'] ?? '';
+
+  if (accessToken) {
+    const { data, error } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+    if (error) throw error;
+    return data;
   }
 
-  const { data, error } = await supabase.auth.signInWithIdToken({
-    provider: 'google',
-    token: idToken,
-    nonce: rawNonce,
-  });
+  // PKCE flow: extract code and exchange it
+  const code = params['code'];
+  if (code) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) throw error;
+    return data;
+  }
 
-  if (error) throw error;
-  return data;
+  throw new Error('Google sign-in: no session tokens in redirect URL.');
 }
 
 // Real web platform (expo start --web): full-page redirect OAuth via Supabase.
