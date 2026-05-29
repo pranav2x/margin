@@ -102,9 +102,19 @@ export async function signInWithGoogle() {
     throw oauthError ?? new Error('Failed to get Google OAuth URL');
   }
 
-  // Fire-and-forget: open browser. The redirect deep link is handled by the
-  // Linking listener in the root layout (works in both Expo Go and dev builds).
-  await WebBrowser.openBrowserAsync(oauthData.url);
+  // openAuthSessionAsync watches for the redirect back to redirectUri, closes the
+  // in-app browser, and hands us the callback URL. This single path works for both
+  // the exp:// redirect (Expo Go) and the margin:// redirect (dev build) — no need
+  // to branch on isExpoGo here.
+  const result = await WebBrowser.openAuthSessionAsync(oauthData.url, redirectUri);
+
+  if (result.type === 'success' && result.url) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(result.url);
+    if (error) throw error;
+    return data;
+  }
+
+  // User dismissed the browser or the flow did not complete.
   return null;
 }
 
