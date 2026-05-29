@@ -169,6 +169,10 @@ function ThemedRoot() {
           name="athlete/[id]"
           options={{ animation: 'slide_from_bottom', presentation: 'card' }}
         />
+        <Stack.Screen
+          name="player/[id]"
+          options={{ animation: 'slide_from_bottom', presentation: 'card' }}
+        />
         <Stack.Screen name="onboarding/index" options={{ animation: 'fade' }} />
         <Stack.Screen name="splash" options={{ animation: 'fade' }} />
       </Stack>

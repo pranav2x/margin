@@ -125,3 +125,36 @@ export function useMetricCatalog() {
     },
   });
 }
+
+// Read-only public profile by id (block-aware via RLS — returns null if blocked
+// or not found). Reused by the player/[id] route and Battles.
+export function usePublicProfile(id: string | undefined) {
+  return useQuery({
+    queryKey: ['public-profile', id],
+    enabled: !!id,
+    queryFn: async (): Promise<MyProfile | null> => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, handle, display_name, grad_year, primary_sport, age_band, avatar_url, school:schools(name, city, state)')
+        .eq('id', id!)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as unknown as MyProfile) ?? null;
+    },
+  });
+}
+
+export function usePublicStats(id: string | undefined) {
+  return useQuery({
+    queryKey: ['public-stats', id],
+    enabled: !!id,
+    queryFn: async (): Promise<PlayerStat[]> => {
+      const { data, error } = await supabase
+        .from('player_stats')
+        .select(`id, value, verified, verification_method, is_plausible, notes, metric:sport_metrics(${METRIC_COLUMNS})`)
+        .eq('profile_id', id!);
+      if (error) throw error;
+      return (data as unknown as PlayerStat[]) ?? [];
+    },
+  });
+}

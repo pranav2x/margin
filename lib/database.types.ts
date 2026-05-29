@@ -381,6 +381,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      leaderboard: {
+        Args: {
+          p_limit?: number
+          p_metric_key: string
+          p_only_verified?: boolean
+          p_scope: string
+          p_sport: string
+        }
+        Returns: {
+          handle: string
+          profile_id: string
+          rank: number
+          ranked: boolean
+          school_name: string
+          value: number
+          verification_method: string
+          verified: boolean
+        }[]
+      }
+      my_percentile: {
+        Args: { p_metric_key: string; p_scope: string; p_sport: string }
+        Returns: number
+      }
       nearby_schools: {
         Args: { p_lat: number; p_limit?: number; p_lng: number }
         Returns: {
