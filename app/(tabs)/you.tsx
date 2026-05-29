@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { View, ScrollView, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
@@ -28,6 +28,7 @@ import {
   type Sport,
 } from '../../lib/hooks/usePlayerProfile';
 import { useTheme, space, SCREEN_PADDING } from '../../theme';
+import { signOut } from '../../lib/auth';
 
 export default function YouScreen() {
   const { colors } = useTheme();
@@ -40,6 +41,20 @@ export default function YouScreen() {
 
   const sheetRef = useRef<StatEntrySheetRef>(null);
   const cardRef = useRef<View>(null);
+
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
+
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    setSignOutError(null);
+    try {
+      await signOut();
+    } catch (err) {
+      setSignOutError(err instanceof Error ? err.message : 'Sign out failed.');
+      setIsSigningOut(false);
+    }
+  };
 
   const profile = profileQ.data;
   const stats = useMemo(() => statsQ.data ?? [], [statsQ.data]);
@@ -182,6 +197,33 @@ export default function YouScreen() {
         </ScrollView>
 
         <StatEntrySheet ref={sheetRef} ageBand={profile?.age_band ?? null} metrics={catalogQ.data ?? []} onSaved={onSaved} />
+
+        {/* Sign-out footer */}
+        <View
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            paddingHorizontal: SCREEN_PADDING,
+            paddingTop: space[3],
+            paddingBottom: insets.bottom + space[3],
+            backgroundColor: colors.paper,
+          }}
+        >
+          {signOutError ? (
+            <Txt variant="bodySm" tone="ash" style={{ marginBottom: space[2], textAlign: 'center' }}>
+              {signOutError}
+            </Txt>
+          ) : null}
+          <PrimaryButton
+            label="SIGN OUT"
+            variant="ghost"
+            full
+            disabled={isSigningOut}
+            onPress={handleSignOut}
+          />
+        </View>
       </View>
     </BottomSheetModalProvider>
   );
