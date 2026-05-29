@@ -12,7 +12,6 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { sha256 } from 'js-sha256';
-import * as Linking from 'expo-linking';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { supabase } from './supabase';
@@ -103,37 +102,10 @@ export async function signInWithGoogle() {
     throw oauthError ?? new Error('Failed to get Google OAuth URL');
   }
 
-  const result = await WebBrowser.openAuthSessionAsync(oauthData.url, redirectUri);
-
-  if (result.type !== 'success') {
-    throw new Error('Google sign-in was cancelled or did not complete.');
-  }
-
-  // Use expo-linking to parse the redirect URL (works reliably with Hermes)
-  const parsed = Linking.parse(result.url);
-  const params = (parsed.queryParams ?? {}) as Record<string, string>;
-
-  const accessToken = params['access_token'];
-  const refreshToken = params['refresh_token'] ?? '';
-
-  if (accessToken) {
-    const { data, error } = await supabase.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken,
-    });
-    if (error) throw error;
-    return data;
-  }
-
-  // PKCE flow: extract code and exchange it
-  const code = params['code'];
-  if (code) {
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-    if (error) throw error;
-    return data;
-  }
-
-  throw new Error('Google sign-in: no session tokens in redirect URL.');
+  // Fire-and-forget: open browser. The redirect deep link is handled by the
+  // Linking listener in the root layout (works in both Expo Go and dev builds).
+  await WebBrowser.openBrowserAsync(oauthData.url);
+  return null;
 }
 
 // Real web platform (expo start --web): full-page redirect OAuth via Supabase.
