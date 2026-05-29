@@ -11,10 +11,20 @@
 
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import { sha256 } from 'js-sha256';
 import { supabase } from './supabase';
 import * as AppleAuthentication from 'expo-apple-authentication';
 
 export const isExpoGo = Constants.appOwnership === 'expo';
+
+function generateRawNonce(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < 32; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
 
 // ── Email one-time code (works in Expo Go) ───────────────────
 
@@ -77,13 +87,20 @@ export async function signInWithGoogle() {
 
   const GoogleSignin = getGoogleSignin();
 
+  // Generate a nonce so Supabase can verify the Google ID token's nonce claim.
+  // The Google SDK receives the SHA-256 hash; Supabase receives the raw value.
+  const rawNonce = generateRawNonce();
+  const hashedNonce = sha256(rawNonce);
+
   // Clear any cached Google session so we always get a fresh ID token.
   try {
     await GoogleSignin.signOut();
   } catch {}
 
   await GoogleSignin.hasPlayServices();
-  const response = await GoogleSignin.signIn();
+  // @ts-expect-error nonce is not in the v16 public types but is accepted by the
+  // underlying native module and forwarded to the iOS GID SDK.
+  const response = await GoogleSignin.signIn({ nonce: hashedNonce });
 
   console.log('[GOOGLE DEBUG]', JSON.stringify(response));
 
@@ -99,6 +116,7 @@ export async function signInWithGoogle() {
   const { data, error } = await supabase.auth.signInWithIdToken({
     provider: 'google',
     token: idToken,
+    nonce: rawNonce,
   });
 
   if (error) throw error;
