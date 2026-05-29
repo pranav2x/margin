@@ -7,9 +7,34 @@
  */
 
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
+import * as Linking from 'expo-linking';
 import { supabase } from './supabase';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+
+// @react-native-google-signin/google-signin is a native module that is NOT
+// present in Expo Go. Importing it at module load crashes Expo Go, so we load
+// it lazily and only configure it once, the first time Google sign-in is used.
+const isExpoGo = Constants.appOwnership === 'expo';
+
+let _googleSignin: typeof import('@react-native-google-signin/google-signin').GoogleSignin | null = null;
+
+function getGoogleSignin() {
+  if (isExpoGo) {
+    throw new Error(
+      'Google sign-in requires a development build (npx expo run:ios). It is not available in Expo Go.'
+    );
+  }
+  if (!_googleSignin) {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    _googleSignin = require('@react-native-google-signin/google-signin').GoogleSignin;
+    _googleSignin!.configure({
+      webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+      iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    });
+  }
+  return _googleSignin!;
+}
 
 // ── [NONCE DEBUG] temporary diagnostics — REMOVE AFTER DEBUGGING ──
 // Decodes a JWT's middle segment (base64url) → JSON. Never throws.
@@ -32,18 +57,22 @@ function __decodeJwtPayload(token: string): any {
 
 // ── Google ──────────────────────────────────────────────────
 
-GoogleSignin.configure({
-  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-});
-
 export async function signInWithGoogle() {
+  // Expo Go can't load the native Google module, so fall back to a
+  // browser-based Supabase OAuth flow there. Dev builds use the native flow.
+  if (isExpoGo) {
+    return signInWithGoogleWeb();
+  }
+
+  const GoogleSignin = getGoogleSignin();
+
   // Clear any cached Google session to ensure a fresh ID token
   try { await GoogleSignin.signOut(); } catch {}
 
   console.log('[NONCE DEBUG] ===== PROVIDER: GOOGLE path ran =====');
 
   await GoogleSignin.hasPlayServices();
+  console.log('[NONCE DEBUG] signIn args ->', 'none');
   const response = await GoogleSignin.signIn();
 
   if (!response.data?.idToken) {
@@ -68,6 +97,42 @@ export async function signInWithGoogle() {
     throw error;
   }
   return data;
+}
+
+// Browser-based Google OAuth via Supabase — works in Expo Go (PKCE flow).
+async function signInWithGoogleWeb() {
+  // expo-web-browser is bundled in Expo Go but may be absent from older dev
+  // builds, so require it lazily — this path only runs in Expo Go anyway.
+  const WebBrowser = require('expo-web-browser') as typeof import('expo-web-browser');
+
+  const redirectTo = Linking.createURL('auth-callback');
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo, skipBrowserRedirect: true },
+  });
+  if (error) throw error;
+  if (!data?.url) throw new Error('Google sign-in failed — no OAuth URL returned.');
+
+  const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+  if (result.type === 'cancel' || result.type === 'dismiss') {
+    throw new Error('Google sign-in was cancelled.');
+  }
+  if (result.type !== 'success' || !result.url) {
+    throw new Error('Google sign-in failed — no redirect received.');
+  }
+
+  const { queryParams } = Linking.parse(result.url);
+  const code = queryParams?.code as string | undefined;
+  if (!code) {
+    const errDesc = (queryParams?.error_description ?? queryParams?.error) as string | undefined;
+    throw new Error(errDesc ?? 'Google sign-in failed — no auth code in redirect.');
+  }
+
+  const { data: sessionData, error: exchangeError } =
+    await supabase.auth.exchangeCodeForSession(code);
+  if (exchangeError) throw exchangeError;
+  return sessionData;
 }
 
 // ── Apple ───────────────────────────────────────────────────
