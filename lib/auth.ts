@@ -87,6 +87,8 @@ export async function signInWithGoogle() {
     isExpoGo ? {} : { scheme: 'margin' }
   );
 
+  console.log('[REDIRECT URI]', redirectUri);
+
   const { data: oauthData, error: oauthError } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -98,6 +100,8 @@ export async function signInWithGoogle() {
     },
   });
 
+  console.log('[OAUTH URL]', oauthData?.url);
+
   if (oauthError || !oauthData?.url) {
     throw oauthError ?? new Error('Failed to get Google OAuth URL');
   }
@@ -107,6 +111,8 @@ export async function signInWithGoogle() {
   // the exp:// redirect (Expo Go) and the margin:// redirect (dev build) — no need
   // to branch on isExpoGo here.
   const result = await WebBrowser.openAuthSessionAsync(oauthData.url, redirectUri);
+
+  console.log('[AUTH RESULT]', JSON.stringify(result));
 
   if (result.type === 'success' && result.url) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(result.url);
