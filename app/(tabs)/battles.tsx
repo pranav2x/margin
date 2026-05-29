@@ -1,30 +1,347 @@
-import { View } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { View, ScrollView, Pressable, TextInput, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { captureRef } from 'react-native-view-shot';
+import * as Sharing from 'expo-sharing';
+import * as Haptics from 'expo-haptics';
 
 import { Txt } from '../../components/primitives/Text';
 import { MicroLabel } from '../../components/primitives/MicroLabel';
-import { useTheme, space, SCREEN_PADDING } from '../../theme';
+import { HairlineRule } from '../../components/primitives/HairlineRule';
+import { Avatar } from '../../components/primitives/Avatar';
+import { PrimaryButton } from '../../components/primitives/PrimaryButton';
+import { Score } from '../../components/motion/Score';
+import { BattleShareCard } from '../../components/composite/BattleShareCard';
+import {
+  SPORT_LABELS,
+  formatStatValue,
+  useMyProfile,
+  useMyStats,
+  useOpponentSearch,
+  usePublicProfile,
+  usePublicStats,
+  useSchoolOpponents,
+  type MetricRow,
+  type MyProfile,
+  type PlayerStat,
+  type Sport,
+} from '../../lib/hooks/usePlayerProfile';
+import { useTheme, space, SCREEN_PADDING, fonts } from '../../theme';
+
+type Winner = 'me' | 'opp' | 'tie';
+
+function decideWinner(metric: MetricRow, a: PlayerStat, b: PlayerStat): Winner {
+  if (a.value === b.value) return 'tie';
+  if (metric.direction === 'lower_better') return a.value < b.value ? 'me' : 'opp';
+  return a.value > b.value ? 'me' : 'opp';
+}
+
+interface CompRow {
+  metric: MetricRow;
+  mine: PlayerStat;
+  theirs: PlayerStat;
+  official: boolean;
+  winner: Winner;
+}
+
+function OpponentRow({ p, onPress }: { p: MyProfile; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Battle @${p.handle}`}
+      style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: SCREEN_PADDING, paddingVertical: space[4], minHeight: 56 }}
+    >
+      <Avatar uri={p.avatar_url ?? undefined} size={44} />
+      <View style={{ flex: 1, marginLeft: space[4] }}>
+        <Txt variant="bodyLg">@{p.handle}</Txt>
+        {p.school?.name ? <MicroLabel style={{ marginTop: 2 }}>{p.school.name}</MicroLabel> : null}
+      </View>
+    </Pressable>
+  );
+}
+
+function ComparisonRow({ row, showWinner }: { row: CompRow; showWinner: boolean }) {
+  const unit = row.metric.unit;
+  const meTone = showWinner && row.winner === 'me' ? 'ink' : 'ash';
+  const oppTone = showWinner && row.winner === 'opp' ? 'ink' : 'ash';
+  return (
+    <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[4] }}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+        <View style={{ width: 76, alignItems: 'flex-start' }}>
+          <Score value={formatStatValue(row.mine.value, unit)} size="sm" tone={meTone} />
+          {showWinner && row.winner === 'me' && <MicroLabel tone="ink" style={{ marginTop: space[1] }}>WINS</MicroLabel>}
+        </View>
+
+        <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: space[2] }}>
+          <Txt variant="bodySm" style={{ textAlign: 'center' }}>{row.metric.label}</Txt>
+          {unit ? <MicroLabel style={{ marginTop: 2 }}>{unit}</MicroLabel> : null}
+          {showWinner && row.winner === 'tie' && <MicroLabel tone="ink" style={{ marginTop: space[1] }}>TIE</MicroLabel>}
+        </View>
+
+        <View style={{ width: 76, alignItems: 'flex-end' }}>
+          <Score value={formatStatValue(row.theirs.value, unit)} size="sm" tone={oppTone} />
+          {showWinner && row.winner === 'opp' && <MicroLabel tone="ink" style={{ marginTop: space[1] }}>WINS</MicroLabel>}
+        </View>
+      </View>
+    </View>
+  );
+}
 
 export default function BattlesScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
+  const meQ = useMyProfile();
+  const me = meQ.data;
+  const mySport = me?.primary_sport ?? null;
+
+  const myStatsQ = useMyStats();
+  const myStats = useMemo(() => myStatsQ.data ?? [], [myStatsQ.data]);
+
+  const [query, setQuery] = useState('');
+  const [opponentId, setOpponentId] = useState<string | null>(null);
+
+  const searchQ = useOpponentSearch(query, mySport, me?.id);
+  const schoolQ = useSchoolOpponents(me?.school_id ?? null, mySport, me?.id);
+
+  const oppProfileQ = usePublicProfile(opponentId ?? undefined);
+  const oppStatsQ = usePublicStats(opponentId ?? undefined);
+  const opp = oppProfileQ.data;
+  const oppStats = useMemo(() => oppStatsQ.data ?? [], [oppStatsQ.data]);
+
+  const cardRef = useRef<View>(null);
+
+  const comparison = useMemo<CompRow[]>(() => {
+    const byMetric = new Map<string, PlayerStat>();
+    for (const s of oppStats) byMetric.set(s.metric.id, s);
+    const rows: CompRow[] = [];
+    for (const mine of myStats) {
+      const theirs = byMetric.get(mine.metric.id);
+      if (!theirs) continue;
+      const official =
+        mine.verified && mine.is_plausible !== false && theirs.verified && theirs.is_plausible !== false;
+      rows.push({ metric: mine.metric, mine, theirs, official, winner: decideWinner(mine.metric, mine, theirs) });
+    }
+    rows.sort((a, b) => a.metric.sort_order - b.metric.sort_order);
+    return rows;
+  }, [myStats, oppStats]);
+
+  const officialRows = comparison.filter((r) => r.official);
+  const notCounted = comparison.filter((r) => !r.official);
+  const myWins = officialRows.filter((r) => r.winner === 'me').length;
+  const oppWins = officialRows.filter((r) => r.winner === 'opp').length;
+  const ties = officialRows.filter((r) => r.winner === 'tie').length;
+
+  const sportLabel = mySport ? SPORT_LABELS[mySport as Sport] ?? null : null;
+
+  const pick = (id: string) => {
+    Haptics.selectionAsync();
+    setOpponentId(id);
+  };
+
+  const share = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      const uri = await captureRef(cardRef, { format: 'png', quality: 1 });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share this battle' });
+      }
+    } catch {
+      // Capture/share unavailable — no-op.
+    }
+  };
+
+  // ── Selection view ────────────────────────────────────────
+  if (!opponentId) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top }}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+        >
+          <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[6] }}>
+            <MicroLabel>HEAD TO HEAD</MicroLabel>
+            <Txt variant="display1" accessibilityRole="header" style={{ marginTop: space[2], fontSize: 56, lineHeight: 60 }}>
+              Battles
+            </Txt>
+            <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[4], lineHeight: 26 }}>
+              Line up your stats against another athlete in {sportLabel ?? 'your sport'}.
+            </Txt>
+          </View>
+
+          {!mySport ? (
+            <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8] }}>
+              <Txt variant="display4" italic tone="ash" style={{ fontFamily: 'InstrumentSerifItalic' }}>
+                Set your primary sport on the You tab to battle.
+              </Txt>
+            </View>
+          ) : (
+            <>
+              <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[7] }}>
+                <MicroLabel>SEARCH BY HANDLE</MicroLabel>
+                <TextInput
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="@handle"
+                  placeholderTextColor={colors.ash}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  allowFontScaling={false}
+                  style={{
+                    fontFamily: fonts.serif,
+                    fontSize: 28,
+                    lineHeight: 32,
+                    color: colors.ink,
+                    paddingVertical: space[2],
+                  }}
+                />
+                <HairlineRule />
+              </View>
+
+              {searchQ.isFetching && (
+                <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[4] }}>
+                  <ActivityIndicator color={colors.ink} />
+                </View>
+              )}
+
+              {query.trim().length >= 2 && (searchQ.data ?? []).length === 0 && !searchQ.isFetching && (
+                <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[5] }}>
+                  <Txt variant="bodyLg" tone="ash" italic style={{ fontFamily: 'InstrumentSerifItalic' }}>
+                    No {sportLabel?.toLowerCase()} athletes by that handle.
+                  </Txt>
+                </View>
+              )}
+
+              {(searchQ.data ?? []).map((p, i) => (
+                <View key={p.id}>
+                  {i === 0 && <HairlineRule style={{ marginTop: space[3] }} />}
+                  <OpponentRow p={p} onPress={() => pick(p.id)} />
+                  <HairlineRule />
+                </View>
+              ))}
+
+              <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8], paddingBottom: space[2] }}>
+                <MicroLabel>AT YOUR SCHOOL</MicroLabel>
+              </View>
+              <HairlineRule />
+              {(schoolQ.data ?? []).length === 0 ? (
+                <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[5] }}>
+                  <Txt variant="bodyLg" tone="ash">No teammates on the board yet.</Txt>
+                </View>
+              ) : (
+                (schoolQ.data ?? []).map((p, i) => (
+                  <View key={p.id}>
+                    <OpponentRow p={p} onPress={() => pick(p.id)} />
+                    {i < (schoolQ.data ?? []).length - 1 && <HairlineRule />}
+                  </View>
+                ))
+              )}
+            </>
+          )}
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // ── Comparison view ───────────────────────────────────────
   return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: colors.paper,
-        paddingTop: insets.top + space[7],
-        paddingHorizontal: SCREEN_PADDING,
-      }}
-    >
-      <MicroLabel>HEAD-TO-HEAD</MicroLabel>
-      <Txt variant="display2" style={{ marginTop: space[3] }}>
-        Battles
-      </Txt>
-      <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[4] }}>
-        Compare athletes side by side here.
-      </Txt>
+    <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top }}>
+      <View style={{ height: 56, paddingHorizontal: SCREEN_PADDING, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Pressable onPress={() => { Haptics.selectionAsync(); setOpponentId(null); }} hitSlop={12} accessibilityRole="button">
+          <MicroLabel tone="ink">CHANGE OPPONENT</MicroLabel>
+        </Pressable>
+        <Pressable onPress={() => router.push(`/player/${opponentId}` as never)} hitSlop={12} accessibilityRole="button">
+          <MicroLabel tone="ink">VIEW PROFILE</MicroLabel>
+        </Pressable>
+      </View>
+      <HairlineRule />
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}>
+        {/* Tally header */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: SCREEN_PADDING, paddingTop: space[7] }}>
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Avatar uri={me?.avatar_url ?? undefined} size={56} />
+            <Txt variant="bodySm" numberOfLines={1} style={{ marginTop: space[2], fontFamily: 'GeistMono' }}>@{me?.handle ?? 'you'}</Txt>
+          </View>
+          <View style={{ alignItems: 'center', paddingHorizontal: space[4] }}>
+            <Score value={`${myWins}–${oppWins}`} size="xl" />
+            <MicroLabel style={{ marginTop: space[2] }}>{ties > 0 ? `${ties} TIE${ties > 1 ? 'S' : ''}` : 'OFFICIAL'}</MicroLabel>
+          </View>
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Avatar uri={opp?.avatar_url ?? undefined} size={56} />
+            <Txt variant="bodySm" numberOfLines={1} style={{ marginTop: space[2], fontFamily: 'GeistMono' }}>@{opp?.handle ?? ''}</Txt>
+          </View>
+        </View>
+
+        {oppProfileQ.isLoading || oppStatsQ.isLoading ? (
+          <View style={{ paddingVertical: space[8], alignItems: 'center' }}>
+            <ActivityIndicator color={colors.ink} />
+          </View>
+        ) : comparison.length === 0 ? (
+          <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8] }}>
+            <Txt variant="display4" italic tone="ash" style={{ fontFamily: 'InstrumentSerifItalic' }}>
+              No shared metrics yet.
+            </Txt>
+            <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
+              You both need a stat on the same metric to compare.
+            </Txt>
+          </View>
+        ) : (
+          <>
+            {/* Official comparison */}
+            <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8], paddingBottom: space[2] }}>
+              <MicroLabel>OFFICIAL · VERIFIED ONLY</MicroLabel>
+            </View>
+            <HairlineRule />
+            {officialRows.length === 0 ? (
+              <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[5] }}>
+                <Txt variant="bodyLg" tone="ash">Nothing verified on both sides yet.</Txt>
+              </View>
+            ) : (
+              officialRows.map((row, i) => (
+                <View key={row.metric.id}>
+                  <ComparisonRow row={row} showWinner />
+                  {i < officialRows.length - 1 && <HairlineRule />}
+                </View>
+              ))
+            )}
+
+            {/* Share card */}
+            <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8] }}>
+              <BattleShareCard
+                ref={cardRef}
+                meHandle={me?.handle ?? 'you'}
+                oppHandle={opp?.handle ?? ''}
+                sportLabel={sportLabel}
+                myWins={myWins}
+                oppWins={oppWins}
+                hasUnverified={notCounted.length > 0}
+              />
+              <PrimaryButton label="SHARE BATTLE" variant="ghost" full onPress={share} style={{ marginTop: space[4] }} />
+            </View>
+
+            {/* Not counted (unverified / implausible) */}
+            {notCounted.length > 0 && (
+              <>
+                <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8], paddingBottom: space[2] }}>
+                  <MicroLabel>UNVERIFIED · NOT COUNTED</MicroLabel>
+                </View>
+                <HairlineRule />
+                {notCounted.map((row, i) => (
+                  <View key={row.metric.id} style={{ opacity: 0.6 }}>
+                    <ComparisonRow row={row} showWinner={false} />
+                    {i < notCounted.length - 1 && <HairlineRule />}
+                  </View>
+                ))}
+              </>
+            )}
+          </>
+        )}
+      </ScrollView>
     </View>
   );
 }

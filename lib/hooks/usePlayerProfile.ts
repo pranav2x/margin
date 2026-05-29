@@ -46,6 +46,7 @@ export interface MyProfile {
   primary_sport: string | null;
   age_band: AgeBand | null;
   avatar_url: string | null;
+  school_id: string | null;
   school: { name: string; city: string | null; state: string | null } | null;
 }
 
@@ -85,7 +86,7 @@ export function useMyProfile() {
       if (!user) return null;
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, handle, display_name, grad_year, primary_sport, age_band, avatar_url, school:schools(name, city, state)')
+        .select('id, handle, display_name, grad_year, primary_sport, age_band, avatar_url, school_id, school:schools(name, city, state)')
         .eq('id', user.id)
         .maybeSingle();
       if (error) throw error;
@@ -135,7 +136,7 @@ export function usePublicProfile(id: string | undefined) {
     queryFn: async (): Promise<MyProfile | null> => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, handle, display_name, grad_year, primary_sport, age_band, avatar_url, school:schools(name, city, state)')
+        .select('id, handle, display_name, grad_year, primary_sport, age_band, avatar_url, school_id, school:schools(name, city, state)')
         .eq('id', id!)
         .maybeSingle();
       if (error) throw error;
@@ -155,6 +156,47 @@ export function usePublicStats(id: string | undefined) {
         .eq('profile_id', id!);
       if (error) throw error;
       return (data as unknown as PlayerStat[]) ?? [];
+    },
+  });
+}
+
+const OPPONENT_COLUMNS =
+  'id, handle, display_name, grad_year, primary_sport, age_band, avatar_url, school_id, school:schools(name, city, state)';
+
+// Search opponents by handle, restricted to the same sport (like-for-like).
+// Block-aware via RLS; the viewer is filtered out client-side.
+export function useOpponentSearch(query: string, sport: string | null, selfId: string | undefined) {
+  const q = query.trim();
+  return useQuery({
+    queryKey: ['opponent-search', sport, q],
+    enabled: !!sport && q.length >= 2,
+    queryFn: async (): Promise<MyProfile[]> => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(OPPONENT_COLUMNS)
+        .eq('primary_sport', sport!)
+        .ilike('handle', `%${q}%`)
+        .limit(20);
+      if (error) throw error;
+      return ((data as unknown as MyProfile[]) ?? []).filter((p) => p.id !== selfId);
+    },
+  });
+}
+
+// Browse same-sport athletes at the viewer's school.
+export function useSchoolOpponents(schoolId: string | null, sport: string | null, selfId: string | undefined) {
+  return useQuery({
+    queryKey: ['school-opponents', schoolId, sport],
+    enabled: !!schoolId && !!sport,
+    queryFn: async (): Promise<MyProfile[]> => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(OPPONENT_COLUMNS)
+        .eq('primary_sport', sport!)
+        .eq('school_id', schoolId!)
+        .limit(50);
+      if (error) throw error;
+      return ((data as unknown as MyProfile[]) ?? []).filter((p) => p.id !== selfId);
     },
   });
 }
