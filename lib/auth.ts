@@ -106,6 +106,7 @@ async function signInWithGoogleWeb() {
   const WebBrowser = require('expo-web-browser') as typeof import('expo-web-browser');
 
   const redirectTo = Linking.createURL('auth-callback');
+  console.log('[GOOGLE OAUTH] redirectTo (add this to Supabase → Redirect URLs):', redirectTo);
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
