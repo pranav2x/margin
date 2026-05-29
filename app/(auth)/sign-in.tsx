@@ -14,25 +14,25 @@ export default function SignIn() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleApple = async () => {
-    setError(null);
-    setLoading(true);
-    try {
-      await signInWithApple();
-    } catch (e: any) {
-      setError(e.message ?? 'Apple sign-in failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleGoogle = async () => {
     setError(null);
     setLoading(true);
     try {
       await signInWithGoogle();
-    } catch (e: any) {
-      setError(e.message ?? 'Google sign-in failed.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Google sign-in failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApple = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      await signInWithApple();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Apple sign-in failed.');
     } finally {
       setLoading(false);
     }
@@ -49,49 +49,44 @@ export default function SignIn() {
         justifyContent: 'flex-end',
       }}
     >
-      {/* Masthead */}
       <View style={{ flex: 1, justifyContent: 'center' }}>
-        <Txt variant="display2" style={{ fontSize: 52, lineHeight: 56 }}>
-          Welcome to{' '}
-          <Txt
-            variant="display2"
-            italic
-            style={{ fontFamily: 'InstrumentSerifItalic', fontSize: 52, lineHeight: 56 }}
-          >
-            MARGIN.
-          </Txt>
+        <Txt variant="display1" style={{ fontSize: 76, lineHeight: 80 }}>
+          MARGIN
         </Txt>
-        <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[6], lineHeight: 26 }}>
-          A sports app for people who watch the game, then read about it.
+        <Txt
+          variant="display4"
+          italic
+          tone="ash"
+          style={{ marginTop: space[4], fontFamily: 'InstrumentSerifItalic', fontSize: 24, lineHeight: 30 }}
+        >
+          Your game, by the numbers.
         </Txt>
       </View>
 
-      {/* Error */}
       {error && (
-        <Txt variant="bodySm" style={{ color: '#C0392B', marginBottom: space[4] }}>
+        <Txt variant="bodySm" tone="ash" style={{ marginBottom: space[4] }}>
           {error}
         </Txt>
       )}
 
-      {/* Auth buttons */}
       <View style={{ gap: space[3] }}>
+        <PrimaryButton
+          label="CONTINUE WITH GOOGLE"
+          full
+          onPress={handleGoogle}
+          disabled={loading}
+        />
         {appleAuthAvailable() && (
           <PrimaryButton
             label="CONTINUE WITH APPLE"
+            variant="ghost"
             full
             onPress={handleApple}
             disabled={loading}
           />
         )}
-        <PrimaryButton
-          label="CONTINUE WITH GOOGLE"
-          variant="ghost"
-          full
-          onPress={handleGoogle}
-          disabled={loading}
-        />
         <MicroLabel style={{ textAlign: 'center', marginTop: space[2] }}>
-          BY CONTINUING YOU AGREE TO OUR TERMS
+          AGES 13 AND UP · YOU'LL CONFIRM YOUR AGE NEXT
         </MicroLabel>
       </View>
     </View>

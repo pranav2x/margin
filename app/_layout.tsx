@@ -6,7 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { View, ActivityIndicator } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 
@@ -68,63 +68,80 @@ export default function RootLayout() {
   );
 }
 
+interface AuthGate {
+  birth_year: number | null;
+  eula_accepted_at: string | null;
+  onboarded: boolean;
+}
+
 function ThemedRoot() {
   const { colors, isDark } = useTheme();
   const router = useRouter();
   const segments = useSegments();
 
   const [session, setSession] = useState<Session | null>(null);
-  const [onboarded, setOnboarded] = useState<boolean | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [authReady, setAuthReady] = useState(false);
 
   // Subscribe to auth state
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
-      if (!s) setLoading(false);
+      setAuthReady(true);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
-      if (!s) {
-        setOnboarded(null);
-        setLoading(false);
-      }
+      setAuthReady(true);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fetch onboarded flag when session exists
-  useEffect(() => {
-    if (!session) return;
+  // Gate state lives in react-query so the gate screens can invalidate it after
+  // writing (age, EULA), and the guard below re-runs against fresh data.
+  const userId = session?.user?.id;
+  const { data: gate, isLoading: gateLoading } = useQuery({
+    queryKey: ['auth-gate', userId],
+    enabled: !!userId,
+    queryFn: async (): Promise<AuthGate | null> => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('birth_year, eula_accepted_at, onboarded')
+        .eq('id', userId!)
+        .maybeSingle();
+      return (data as AuthGate) ?? null;
+    },
+  });
 
-    supabase
-      .from('profiles')
-      .select('onboarded')
-      .eq('id', session.user.id)
-      .single()
-      .then(({ data }) => {
-        setOnboarded(data?.onboarded ?? false);
-        setLoading(false);
-      });
-  }, [session]);
+  const loading = !authReady || (!!session && gateLoading);
 
-  // Route guard
+  // Route guard — enforces gate order: sign-in -> age gate -> EULA -> onboarding -> tabs.
   useEffect(() => {
     if (loading) return;
 
-    const inAuthGroup = segments[0] === '(auth)';
-    const inOnboarding = segments[0] === 'onboarding';
+    const seg0 = segments[0];
+    const seg1 = segments[1];
+    const inAuthGroup = seg0 === '(auth)';
 
-    if (!session && !inAuthGroup) {
-      router.replace('/(auth)/sign-in');
-    } else if (session && onboarded === false && !inOnboarding) {
-      router.replace('/onboarding');
-    } else if (session && onboarded && inAuthGroup) {
+    if (!session) {
+      if (!inAuthGroup) router.replace('/(auth)/sign-in');
+      return;
+    }
+
+    const needsAge = !gate || gate.birth_year == null;
+    const needsEula = !needsAge && gate!.eula_accepted_at == null;
+    const needsOnboard = !needsAge && !needsEula && !gate!.onboarded;
+
+    if (needsAge) {
+      if (!(inAuthGroup && seg1 === 'age-gate')) router.replace('/(auth)/age-gate');
+    } else if (needsEula) {
+      if (!(inAuthGroup && (seg1 === 'eula' || seg1 === 'rules'))) router.replace('/(auth)/eula');
+    } else if (needsOnboard) {
+      if (seg0 !== 'onboarding') router.replace('/onboarding');
+    } else if (inAuthGroup) {
       router.replace('/(tabs)');
     }
-  }, [session, onboarded, loading, segments]);
+  }, [session, gate, loading, segments]);
 
   if (loading) {
     return (

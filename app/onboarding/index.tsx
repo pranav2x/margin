@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 
 import { Txt } from '../../components/primitives/Text';
@@ -21,6 +22,7 @@ export default function Onboarding() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
+  const queryClient = useQueryClient();
   const setSports = useUserStore((s) => s.setSports);
   const follow = useUserStore((s) => s.follow);
   const unfollow = useUserStore((s) => s.unfollow);
@@ -69,17 +71,19 @@ export default function Onboarding() {
       } finally {
         setSaving(false);
       }
+      // Refresh the root auth-gate query so the guard sees onboarded=true.
+      await queryClient.invalidateQueries({ queryKey: ['auth-gate'] });
       router.replace('/(tabs)');
     }
   };
 
-  const skip = () => {
+  const skip = async () => {
     // Skip also marks onboarded so user doesn't loop
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        supabase.from('profiles').update({ onboarded: true }).eq('id', user.id);
-      }
-    });
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from('profiles').update({ onboarded: true }).eq('id', user.id);
+    }
+    await queryClient.invalidateQueries({ queryKey: ['auth-gate'] });
     router.replace('/(tabs)');
   };
 
