@@ -13,7 +13,9 @@ import {
   isExpoGo,
 } from '../../lib/auth';
 
-const socialAuthAvailable = !isExpoGo;
+// expo-auth-session Google works everywhere; Apple is native-only
+const googleAvailable = true;
+const appleAvailable = !isExpoGo && appleAuthAvailable();
 
 export default function SignIn() {
   const insets = useSafeAreaInsets();
@@ -53,12 +55,17 @@ export default function SignIn() {
         style={{
           flex: 1,
           paddingHorizontal: SCREEN_PADDING,
-          paddingTop: insets.top + space[5],
-          paddingBottom: insets.bottom + space[5],
+          paddingTop: insets.top + space[6],
+          paddingBottom: insets.bottom + space[6],
         }}
       >
-        <View style={{ flex: 1, justifyContent: 'center' }}>
-          <Txt variant="display1" style={{ fontSize: 76, lineHeight: 80 }} accessibilityRole="header">
+        {/* Wordmark — expands to fill remaining space, centered */}
+        <View style={{ flex: 1, justifyContent: 'center', paddingBottom: space[9] }}>
+          <Txt
+            variant="display1"
+            style={{ fontSize: 76, lineHeight: 80 }}
+            accessibilityRole="header"
+          >
             MARGIN
           </Txt>
           <Txt
@@ -76,32 +83,32 @@ export default function SignIn() {
           </Txt>
         </View>
 
+        {/* Buttons pinned to bottom */}
         <View style={{ gap: space[3] }}>
-          {socialAuthAvailable && (
-            <>
-              <PrimaryButton
-                label="CONTINUE WITH GOOGLE"
-                full
-                onPress={handleGoogle}
-                disabled={loading}
-                accessibilityRole="button"
-                accessibilityLabel="Continue with Google"
-              />
-              {appleAuthAvailable() && (
-                <PrimaryButton
-                  label="CONTINUE WITH APPLE"
-                  variant="ghost"
-                  full
-                  onPress={handleApple}
-                  disabled={loading}
-                  accessibilityRole="button"
-                  accessibilityLabel="Continue with Apple"
-                />
-              )}
-            </>
+          {googleAvailable && (
+            <PrimaryButton
+              label="CONTINUE WITH GOOGLE"
+              full
+              onPress={handleGoogle}
+              disabled={loading}
+              accessibilityRole="button"
+              accessibilityLabel="Continue with Google"
+            />
           )}
 
-          {error && (
+          {appleAvailable && (
+            <PrimaryButton
+              label="CONTINUE WITH APPLE"
+              variant="ghost"
+              full
+              onPress={handleApple}
+              disabled={loading}
+              accessibilityRole="button"
+              accessibilityLabel="Continue with Apple"
+            />
+          )}
+
+          {error != null && (
             <Txt
               variant="bodySm"
               tone="ink"
@@ -113,7 +120,7 @@ export default function SignIn() {
           )}
 
           <MicroLabel style={{ textAlign: 'center', marginTop: space[2] }}>
-            AGES 13 AND UP · YOU'LL CONFIRM YOUR AGE NEXT
+            AGES 13 AND UP
           </MicroLabel>
         </View>
       </View>

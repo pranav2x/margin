@@ -3,10 +3,9 @@
  *
  *  - Email one-time code: pure API calls (signInWithOtp / verifyOtp). Works
  *    EVERYWHERE, including Expo Go — no native module and no OAuth redirect.
- *  - Google: expo-auth-session + expo-web-browser OAuth flow. We generate and
- *    control the nonce on both sides, so Supabase nonce verification succeeds.
- *    Only available in a development build, NOT Expo Go.
- *  - Apple: native Apple Authentication module (dev/standalone build).
+ *  - Google: expo-auth-session + expo-web-browser OAuth flow. Works in both
+ *    Expo Go and development builds on iOS/Android.
+ *  - Apple: native Apple Authentication module (dev/standalone build only).
  *  - Web: Supabase full-page browser-redirect OAuth.
  */
 
@@ -78,12 +77,6 @@ function getGoogleSignin() {
 export async function signInWithGoogle() {
   if (Platform.OS === 'web') {
     return signInWithGoogleBrowserRedirect();
-  }
-
-  if (isExpoGo) {
-    throw new Error(
-      "Google sign-in needs a development build — it can't run in Expo Go.",
-    );
   }
 
   // Generate nonce — we control both sides so Supabase verification succeeds.
