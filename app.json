@@ -16,7 +16,10 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.margin.app",
-      "deploymentTarget": "16.4"
+      "deploymentTarget": "16.4",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Used once to find your school."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -51,7 +54,13 @@
           "iosUrlScheme": "com.googleusercontent.apps.407572513608-9km3b763ht7oh44lfhau11t07gc9ivvl"
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Used once to find your school."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

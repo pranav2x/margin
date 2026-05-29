@@ -1,242 +1,416 @@
-import { useState } from 'react';
-import { View, ScrollView, Pressable } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, ScrollView, Pressable, TextInput, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
+import * as Location from 'expo-location';
 
 import { Txt } from '../../components/primitives/Text';
 import { MicroLabel } from '../../components/primitives/MicroLabel';
-import { Avatar } from '../../components/primitives/Avatar';
 import { HairlineRule } from '../../components/primitives/HairlineRule';
 import { PrimaryButton } from '../../components/primitives/PrimaryButton';
-import { useUserStore } from '../../state/user';
-import { athletes } from '../../data/fixtures/athletes';
-import { useTheme, space, SCREEN_PADDING } from '../../theme';
+import { TabPill } from '../../components/composite/TabPill';
+import { useTheme, space, SCREEN_PADDING, fonts } from '../../theme';
 import { supabase } from '../../lib/supabase';
-import type { Sport } from '../../types';
 
-const SPORTS: Sport[] = ['NBA', 'WNBA', 'NFL', 'MLB', 'NHL', 'SOCCER', 'CFB', 'F1'];
+interface School {
+  id: string;
+  name: string;
+  city: string | null;
+  state: string | null;
+}
+
+const SPORTS = ['Football', 'Basketball', 'Baseball', 'Track'] as const;
+type SportLabel = (typeof SPORTS)[number];
+
+type HandleStatus = 'idle' | 'invalid' | 'checking' | 'available' | 'taken';
+type SchoolMode = 'intro' | 'nearby' | 'manual';
+
+function normalizeHandle(raw: string): string {
+  return raw.toLowerCase().trim().replace(/[^a-z0-9_]/g, '').slice(0, 20);
+}
 
 export default function Onboarding() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const queryClient = useQueryClient();
-  const setSports = useUserStore((s) => s.setSports);
-  const follow = useUserStore((s) => s.follow);
-  const unfollow = useUserStore((s) => s.unfollow);
-  const followingAthletes = useUserStore((s) => s.followingAthletes);
 
-  const [step, setStep] = useState(0);
-  const [picked, setPicked] = useState<Sport[]>(['NBA', 'WNBA']);
+  const [step, setStep] = useState<0 | 1>(0);
+  const [myId, setMyId] = useState<string | null>(null);
+
+  // Step 0 — identity
+  const [handle, setHandle] = useState('');
+  const [handleStatus, setHandleStatus] = useState<HandleStatus>('idle');
+  const [gradYear, setGradYear] = useState('');
+  const [primarySport, setPrimarySport] = useState<SportLabel | null>(null);
+
+  // Step 1 — school
+  const [schoolMode, setSchoolMode] = useState<SchoolMode>('intro');
+  const [locating, setLocating] = useState(false);
+  const [locationDenied, setLocationDenied] = useState(false);
+  const [nearby, setNearby] = useState<School[]>([]);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<School[]>([]);
+  const [selected, setSelected] = useState<School | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const togglePicked = (s: Sport) => {
-    Haptics.selectionAsync();
-    setPicked((p) => (p.includes(s) ? p.filter((x) => x !== s) : [...p, s]));
+  const currentYear = new Date().getFullYear();
+  const gradYearNum = Number(gradYear);
+  const gradYearValid =
+    gradYear.length === 4 && gradYearNum >= currentYear - 1 && gradYearNum <= currentYear + 8;
+  const canContinue = handleStatus === 'available' && gradYearValid && !!primarySport;
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => setMyId(user?.id ?? null));
+  }, []);
+
+  // Debounced handle uniqueness check.
+  useEffect(() => {
+    if (handle.length === 0) {
+      setHandleStatus('idle');
+      return;
+    }
+    if (handle.length < 3) {
+      setHandleStatus('invalid');
+      return;
+    }
+    setHandleStatus('checking');
+    const t = setTimeout(async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('handle', handle)
+        .maybeSingle();
+      setHandleStatus(data && data.id !== myId ? 'taken' : 'available');
+    }, 450);
+    return () => clearTimeout(t);
+  }, [handle, myId]);
+
+  // Debounced manual school search.
+  useEffect(() => {
+    if (schoolMode !== 'manual') return;
+    const q = query.trim();
+    if (q.length < 2) {
+      setResults([]);
+      return;
+    }
+    const t = setTimeout(async () => {
+      const { data } = await supabase
+        .from('schools')
+        .select('id,name,city,state')
+        .ilike('name', `%${q}%`)
+        .order('name')
+        .limit(10);
+      setResults((data ?? []) as School[]);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [query, schoolMode]);
+
+  const handleStatusLabel = (): string => {
+    if (handleStatus === 'checking') return 'CHECKING…';
+    if (handleStatus === 'taken') return 'THAT HANDLE IS TAKEN';
+    if (handleStatus === 'available') return 'AVAILABLE';
+    if (handleStatus === 'invalid') return 'AT LEAST 3 CHARACTERS';
+    return 'LOWERCASE LETTERS, NUMBERS, UNDERSCORE';
   };
 
-  const next = async () => {
+  const useMyLocation = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (step === 1) setSports(picked);
-
-    if (step < 2) {
-      setStep(step + 1);
-    } else {
-      // Final step — persist to Supabase then navigate
-      setSaving(true);
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          // Save sports + onboarded flag
-          await supabase
-            .from('profiles')
-            .update({ following_sports: picked, onboarded: true })
-            .eq('id', user.id);
-
-          // Save athlete follows
-          if (followingAthletes.length > 0) {
-            await supabase.from('follows').upsert(
-              followingAthletes.map((athleteId) => ({
-                user_id: user.id,
-                athlete_id: athleteId,
-              })),
-              { onConflict: 'user_id,athlete_id' },
-            );
-          }
-        }
-      } catch {
-        // Best-effort — user can fix later in settings
-      } finally {
-        setSaving(false);
+    setLocating(true);
+    setLocationDenied(false);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setLocationDenied(true);
+        setSchoolMode('manual');
+        return;
       }
-      // Refresh the root auth-gate query so the guard sees onboarded=true.
-      await queryClient.invalidateQueries({ queryKey: ['auth-gate'] });
-      router.replace('/(tabs)');
+      // One-shot read. The coordinates are used only for this RPC call and are
+      // never stored in state, a store, or the database.
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const { data, error } = await supabase.rpc('nearby_schools', {
+        p_lat: pos.coords.latitude,
+        p_lng: pos.coords.longitude,
+        p_limit: 6,
+      });
+      if (error || !data || data.length === 0) {
+        setSchoolMode('manual');
+        return;
+      }
+      setNearby(data as School[]);
+      setSchoolMode('nearby');
+    } catch {
+      setSchoolMode('manual');
+    } finally {
+      setLocating(false);
     }
   };
 
-  const skip = async () => {
-    // Skip also marks onboarded so user doesn't loop
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from('profiles').update({ onboarded: true }).eq('id', user.id);
+  const pickSchool = (s: School) => {
+    Haptics.selectionAsync();
+    setSelected(s);
+  };
+
+  const finish = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from('profiles')
+          .update({
+            handle,
+            grad_year: gradYearNum,
+            primary_sport: primarySport ? primarySport.toLowerCase() : null,
+            school_id: selected ? selected.id : null,
+            onboarded: true,
+          })
+          .eq('id', user.id);
+      }
+    } catch {
+      // Best-effort; the user can edit later from the You tab.
+    } finally {
+      setSaving(false);
     }
     await queryClient.invalidateQueries({ queryKey: ['auth-gate'] });
-    router.replace('/(tabs)');
+    router.replace('/(tabs)/you');
   };
 
-  return (
-    <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top }}>
-      {step === 0 && (
-        <View style={{ flex: 1, paddingHorizontal: SCREEN_PADDING, justifyContent: 'center' }}>
-          <Txt variant="display2" style={{ fontSize: 52, lineHeight: 56 }}>
-            Welcome to{' '}
-            <Txt
-              variant="display2"
-              italic
-              style={{ fontFamily: 'InstrumentSerifItalic', fontSize: 52, lineHeight: 56 }}
-            >
-              MARGIN.
+  // ── Step 0: identity ──────────────────────────────────────
+  if (step === 0) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top + space[7] }}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingHorizontal: SCREEN_PADDING, paddingBottom: insets.bottom + 120 }}
+        >
+          <MicroLabel>SET UP YOUR BYLINE</MicroLabel>
+          <Txt variant="display2" style={{ marginTop: space[3], fontSize: 44, lineHeight: 48 }}>
+            Who are{' '}
+            <Txt variant="display2" italic style={{ fontFamily: 'InstrumentSerifItalic', fontSize: 44, lineHeight: 48 }}>
+              you?
             </Txt>
           </Txt>
-          <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[6], fontSize: 17, lineHeight: 26 }}>
-            A sports app for people who watch the game, then read about it.
-          </Txt>
 
-          <View style={{ position: 'absolute', left: SCREEN_PADDING, right: SCREEN_PADDING, bottom: insets.bottom + space[5] }}>
-            <PrimaryButton label="CONTINUE" full onPress={next} />
+          {/* Handle */}
+          <View style={{ marginTop: space[8] }}>
+            <MicroLabel>HANDLE</MicroLabel>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: space[2] }}>
+              <Txt variant="display3" tone="ash" style={{ fontSize: 28 }}>@</Txt>
+              <TextInput
+                value={handle}
+                onChangeText={(t) => setHandle(normalizeHandle(t))}
+                placeholder="yourname"
+                placeholderTextColor={colors.ash}
+                autoCapitalize="none"
+                autoCorrect={false}
+                allowFontScaling={false}
+                style={{
+                  flex: 1,
+                  marginLeft: space[1],
+                  fontFamily: fonts.serif,
+                  fontSize: 28,
+                  lineHeight: 32,
+                  color: colors.ink,
+                  paddingVertical: space[1],
+                }}
+              />
+            </View>
+            <HairlineRule />
+            <MicroLabel
+              tone={handleStatus === 'available' ? 'ink' : 'ash'}
+              style={{ marginTop: space[3] }}
+            >
+              {handleStatusLabel()}
+            </MicroLabel>
           </View>
-        </View>
-      )}
 
-      {step === 1 && (
-        <View style={{ flex: 1, paddingHorizontal: SCREEN_PADDING, paddingTop: space[7] }}>
-          <Txt variant="display3">Pick your sports.</Txt>
-          <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
-            We'll keep the feed honest about it.
-          </Txt>
+          {/* Grad year */}
+          <View style={{ marginTop: space[7] }}>
+            <MicroLabel>GRAD YEAR</MicroLabel>
+            <TextInput
+              value={gradYear}
+              onChangeText={(t) => setGradYear(t.replace(/[^0-9]/g, '').slice(0, 4))}
+              placeholder="YYYY"
+              placeholderTextColor={colors.ash}
+              keyboardType="number-pad"
+              maxLength={4}
+              allowFontScaling={false}
+              style={{
+                marginTop: space[2],
+                fontFamily: fonts.monoMedium,
+                fontVariant: ['tabular-nums'],
+                fontSize: 40,
+                lineHeight: 44,
+                letterSpacing: 2,
+                color: colors.ink,
+                paddingVertical: space[1],
+              }}
+            />
+            <HairlineRule />
+          </View>
 
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              marginTop: space[7],
-              gap: space[3],
+          {/* Primary sport */}
+          <View style={{ marginTop: space[7] }}>
+            <MicroLabel style={{ marginBottom: space[3] }}>PRIMARY SPORT</MicroLabel>
+            <TabPill
+              items={SPORTS as unknown as string[]}
+              active={primarySport ?? ''}
+              onChange={(item) => setPrimarySport(item as SportLabel)}
+            />
+          </View>
+        </ScrollView>
+
+        <View style={{ position: 'absolute', left: SCREEN_PADDING, right: SCREEN_PADDING, bottom: insets.bottom + space[5] }}>
+          <PrimaryButton
+            label="CONTINUE"
+            full
+            disabled={!canContinue}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setStep(1);
             }}
-          >
-            {SPORTS.map((s) => {
-              const active = picked.includes(s);
-              return (
+          />
+        </View>
+      </View>
+    );
+  }
+
+  // ── Step 1: school ────────────────────────────────────────
+  const list = schoolMode === 'nearby' ? nearby : results;
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top + space[7] }}>
+      <View style={{ paddingHorizontal: SCREEN_PADDING }}>
+        <MicroLabel>WHERE DO YOU PLAY?</MicroLabel>
+        <Txt variant="display2" style={{ marginTop: space[3], fontSize: 44, lineHeight: 48 }}>
+          Your{' '}
+          <Txt variant="display2" italic style={{ fontFamily: 'InstrumentSerifItalic', fontSize: 44, lineHeight: 48 }}>
+            school.
+          </Txt>
+        </Txt>
+        <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[4], lineHeight: 26 }}>
+          We check your location once to find it — your location is never saved.
+        </Txt>
+      </View>
+
+      <HairlineRule style={{ marginTop: space[6] }} />
+
+      {schoolMode === 'intro' ? (
+        <View style={{ flex: 1, paddingHorizontal: SCREEN_PADDING, paddingTop: space[8], alignItems: 'flex-start' }}>
+          {locating ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
+              <ActivityIndicator color={colors.ink} />
+              <MicroLabel>FINDING SCHOOLS NEAR YOU…</MicroLabel>
+            </View>
+          ) : (
+            <>
+              <PrimaryButton label="FIND MY SCHOOL" onPress={useMyLocation} />
+              <Pressable
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setSchoolMode('manual');
+                }}
+                hitSlop={8}
+                style={{ marginTop: space[6] }}
+              >
+                <Txt variant="bodyLg" italic style={{ fontFamily: 'InstrumentSerifItalic', textDecorationLine: 'underline' }}>
+                  Search by name instead →
+                </Txt>
+              </Pressable>
+            </>
+          )}
+        </View>
+      ) : (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+        >
+          {schoolMode === 'manual' && (
+            <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[5] }}>
+              {locationDenied && (
+                <MicroLabel style={{ marginBottom: space[3] }}>
+                  NO LOCATION — SEARCH FOR YOUR SCHOOL
+                </MicroLabel>
+              )}
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Search schools"
+                placeholderTextColor={colors.ash}
+                autoCorrect={false}
+                allowFontScaling={false}
+                style={{
+                  fontFamily: fonts.serif,
+                  fontSize: 24,
+                  lineHeight: 28,
+                  color: colors.ink,
+                  paddingVertical: space[2],
+                }}
+              />
+              <HairlineRule />
+            </View>
+          )}
+
+          {schoolMode === 'nearby' && (
+            <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[5], paddingBottom: space[3] }}>
+              <MicroLabel>NEAREST TO YOU</MicroLabel>
+            </View>
+          )}
+
+          {list.map((s, i) => {
+            const isSel = selected?.id === s.id;
+            return (
+              <View key={s.id}>
                 <Pressable
-                  key={s}
-                  onPress={() => togglePicked(s)}
+                  onPress={() => pickSchool(s)}
                   style={{
-                    paddingVertical: space[3],
-                    paddingHorizontal: space[5],
-                    borderWidth: 1,
-                    borderColor: colors.ink,
-                    backgroundColor: active ? colors.ink : 'transparent',
+                    paddingHorizontal: SCREEN_PADDING,
+                    paddingVertical: space[4],
+                    backgroundColor: isSel ? colors.ink : 'transparent',
                   }}
                 >
-                  <Txt
-                    variant="label"
-                    style={{ color: active ? colors.paper : colors.ink, letterSpacing: 0.6 }}
-                  >
-                    {s}
+                  <Txt variant="bodyLg" style={{ color: isSel ? colors.paper : colors.ink }}>
+                    {s.name}
                   </Txt>
+                  <MicroLabel tone={isSel ? 'ink' : 'ash'} inverted={isSel} style={{ marginTop: space[1] }}>
+                    {[s.city, s.state].filter(Boolean).join(', ')}
+                  </MicroLabel>
                 </Pressable>
-              );
-            })}
-          </View>
+                {i < list.length - 1 && <HairlineRule />}
+              </View>
+            );
+          })}
 
-          <View style={{ position: 'absolute', left: SCREEN_PADDING, right: SCREEN_PADDING, bottom: insets.bottom + space[5], flexDirection: 'row', gap: space[3] }}>
-            <PrimaryButton label="BACK" variant="ghost" onPress={() => setStep(0)} style={{ flex: 1 }} />
-            <PrimaryButton label="CONTINUE" onPress={next} style={{ flex: 1 }} />
-          </View>
-        </View>
-      )}
-
-      {step === 2 && (
-        <View style={{ flex: 1 }}>
-          <View
-            style={{
-              paddingHorizontal: SCREEN_PADDING,
-              paddingTop: space[7],
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'flex-end',
-            }}
-          >
-            <View>
-              <Txt variant="display3">Pick your athletes.</Txt>
-              <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
-                The story is the person.
+          {schoolMode === 'manual' && query.trim().length >= 2 && results.length === 0 && (
+            <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[6] }}>
+              <Txt variant="bodyLg" tone="ash" italic style={{ fontFamily: 'InstrumentSerifItalic' }}>
+                No schools found.
               </Txt>
             </View>
-            <Pressable onPress={skip} hitSlop={8}>
-              <MicroLabel>SKIP</MicroLabel>
-            </Pressable>
-          </View>
-
-          <HairlineRule style={{ marginTop: space[6] }} />
-
-          <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                flexWrap: 'wrap',
-                paddingHorizontal: SCREEN_PADDING - space[2],
-                paddingTop: space[5],
-              }}
-            >
-              {athletes.slice(0, 24).map((a) => {
-                const active = followingAthletes.includes(a.id);
-                return (
-                  <Pressable
-                    key={a.id}
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      if (active) unfollow(a.id);
-                      else follow(a.id);
-                    }}
-                    style={{
-                      width: '33.33%',
-                      paddingHorizontal: space[2],
-                      paddingVertical: space[3],
-                      alignItems: 'center',
-                    }}
-                  >
-                    <View
-                      style={{
-                        opacity: active ? 1 : 0.55,
-                        borderWidth: active ? 1 : 0,
-                        borderColor: colors.ink,
-                        padding: active ? 2 : 0,
-                        borderRadius: 999,
-                      }}
-                    >
-                      <Avatar uri={a.avatar} size={72} />
-                    </View>
-                    <Txt
-                      variant="bodySm"
-                      style={{ marginTop: space[3], textAlign: 'center' }}
-                      numberOfLines={2}
-                    >
-                      {a.firstName} {a.lastName}
-                    </Txt>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </ScrollView>
-
-          <View style={{ position: 'absolute', left: SCREEN_PADDING, right: SCREEN_PADDING, bottom: insets.bottom + space[5] }}>
-            <PrimaryButton label={saving ? 'SAVING...' : 'DONE'} full onPress={next} disabled={saving} />
-          </View>
-        </View>
+          )}
+        </ScrollView>
       )}
+
+      <View style={{ position: 'absolute', left: SCREEN_PADDING, right: SCREEN_PADDING, bottom: insets.bottom + space[5] }}>
+        <View style={{ flexDirection: 'row', gap: space[3] }}>
+          <PrimaryButton label="BACK" variant="ghost" onPress={() => setStep(0)} style={{ flex: 1 }} />
+          <PrimaryButton
+            label={saving ? 'SAVING…' : 'DONE'}
+            onPress={finish}
+            disabled={saving || !selected}
+            style={{ flex: 1 }}
+          />
+        </View>
+        <Pressable onPress={finish} hitSlop={8} disabled={saving} style={{ marginTop: space[4], alignItems: 'center' }}>
+          <MicroLabel>SKIP FOR NOW</MicroLabel>
+        </Pressable>
+      </View>
     </View>
   );
 }
