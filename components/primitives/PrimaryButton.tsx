@@ -19,6 +19,7 @@ export function PrimaryButton({
   inverted,
   onPress,
   style,
+  disabled,
   ...rest
 }: Props) {
   const { colors } = useTheme();
@@ -41,6 +42,7 @@ export function PrimaryButton({
   return (
     <Pressable
       {...rest}
+      disabled={disabled}
       onPress={(e) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         onPress?.(e);
@@ -54,7 +56,7 @@ export function PrimaryButton({
           paddingHorizontal: space[6],
           alignItems: 'center',
           justifyContent: 'center',
-          opacity: pressed ? 0.8 : 1,
+          opacity: disabled ? 0.4 : pressed ? 0.8 : 1,
           alignSelf: full ? 'stretch' : 'flex-start',
         },
         style,
