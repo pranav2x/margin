@@ -180,10 +180,6 @@ function ThemedRoot() {
         <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
         <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
         <Stack.Screen
-          name="athlete/[id]"
-          options={{ animation: 'slide_from_bottom', presentation: 'card' }}
-        />
-        <Stack.Screen
           name="player/[id]"
           options={{ animation: 'slide_from_bottom', presentation: 'card' }}
         />
