@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState, Platform } from 'react-native';
 
+import type { Database } from './database.types';
+
 // On web we use a full-page redirect OAuth flow, so the Supabase client must
 // detect and exchange the PKCE code in the callback URL. On native this stays
 // disabled because deep-link callbacks are handled explicitly.
@@ -17,7 +19,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,

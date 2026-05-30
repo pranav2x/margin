@@ -90,7 +90,7 @@ export function useMyProfile() {
         .eq('id', user.id)
         .maybeSingle();
       if (error) throw error;
-      return (data as unknown as MyProfile) ?? null;
+      return (data as MyProfile | null) ?? null;
     },
   });
 }
@@ -106,7 +106,7 @@ export function useMyStats() {
         .select(`id, value, verified, verification_method, is_plausible, notes, metric:sport_metrics(${METRIC_COLUMNS})`)
         .eq('profile_id', user.id);
       if (error) throw error;
-      return (data as unknown as PlayerStat[]) ?? [];
+      return (data as PlayerStat[] | null) ?? [];
     },
   });
 }
@@ -122,7 +122,7 @@ export function useMetricCatalog() {
         .order('sport')
         .order('sort_order');
       if (error) throw error;
-      return (data as unknown as MetricRow[]) ?? [];
+      return (data as MetricRow[] | null) ?? [];
     },
   });
 }
@@ -140,7 +140,7 @@ export function usePublicProfile(id: string | undefined) {
         .eq('id', id!)
         .maybeSingle();
       if (error) throw error;
-      return (data as unknown as MyProfile) ?? null;
+      return (data as MyProfile | null) ?? null;
     },
   });
 }
@@ -155,7 +155,7 @@ export function usePublicStats(id: string | undefined) {
         .select(`id, value, verified, verification_method, is_plausible, notes, metric:sport_metrics(${METRIC_COLUMNS})`)
         .eq('profile_id', id!);
       if (error) throw error;
-      return (data as unknown as PlayerStat[]) ?? [];
+      return (data as PlayerStat[] | null) ?? [];
     },
   });
 }
@@ -178,7 +178,7 @@ export function useOpponentSearch(query: string, sport: string | null, selfId: s
         .ilike('handle', `%${q}%`)
         .limit(20);
       if (error) throw error;
-      return ((data as unknown as MyProfile[]) ?? []).filter((p) => p.id !== selfId);
+      return ((data as MyProfile[] | null) ?? []).filter((p) => p.id !== selfId);
     },
   });
 }
@@ -196,7 +196,7 @@ export function useSchoolOpponents(schoolId: string | null, sport: string | null
         .eq('school_id', schoolId!)
         .limit(50);
       if (error) throw error;
-      return ((data as unknown as MyProfile[]) ?? []).filter((p) => p.id !== selfId);
+      return ((data as MyProfile[] | null) ?? []).filter((p) => p.id !== selfId);
     },
   });
 }
@@ -222,7 +222,7 @@ export function useNearbyOpponents(
         .in('school_id', ids)
         .limit(50);
       if (error) throw error;
-      return ((data as unknown as MyProfile[]) ?? []).filter((p) => p.id !== selfId);
+      return ((data as MyProfile[] | null) ?? []).filter((p) => p.id !== selfId);
     },
   });
 }

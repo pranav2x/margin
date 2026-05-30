@@ -45,7 +45,7 @@ export function useConfirmStat(statId: string | undefined) {
         .maybeSingle();
       if (error) throw error;
       if (!data) return null;
-      const row = data as unknown as RawConfirmRow;
+      const row = data as unknown as RawConfirmRow; // PostgREST embeds typed as relation arrays here; explicit shape is clearer.
       return {
         id: row.id,
         value: row.value,
@@ -95,7 +95,7 @@ export function useSchoolUnconfirmed(schoolId: string | null | undefined, selfId
         .neq('id', selfId!)
         .limit(200);
       if (peersError) throw peersError;
-      const peerList = (peers as unknown as RawPeer[]) ?? [];
+      const peerList = (peers as RawPeer[] | null) ?? [];
       if (peerList.length === 0) return [];
       const handleById = new Map(peerList.map((p) => [p.id, p.handle]));
       const peerIds = peerList.map((p) => p.id);
@@ -117,7 +117,7 @@ export function useSchoolUnconfirmed(schoolId: string | null | undefined, selfId
         .eq('cosigner_id', selfId!);
       if (mineError) throw mineError;
       const alreadyCosigned = new Set(
-        ((mine as unknown as { stat_id: string }[]) ?? []).map((c) => c.stat_id),
+        ((mine as { stat_id: string }[] | null) ?? []).map((c) => c.stat_id),
       );
 
       return statList
