@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { View, Pressable, Text, ActivityIndicator, type TextStyle } from 'react-native';
+import { View, Pressable, Text, ActivityIndicator, Share, type TextStyle } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetBackdrop,
@@ -10,6 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import * as DocumentPicker from 'expo-document-picker';
+import * as Linking from 'expo-linking';
 
 import { Txt } from '../primitives/Text';
 import { MicroLabel } from '../primitives/MicroLabel';
@@ -37,7 +38,9 @@ interface Props {
   onSaved: () => void;
 }
 
-type VerifyMethod = 'video_proof' | 'coach_cosign' | 'peer_cosign';
+// Peer co-sign is the only path that actually verifies a mark. Video proof is
+// kept as an honest request stub; coach / external aren't users yet.
+type RequestedMethod = 'peer_cosign' | 'video_proof';
 
 function sanitizeNumeric(raw: string): string {
   const cleaned = raw.replace(/[^0-9.]/g, '');
@@ -59,13 +62,15 @@ export const StatEntrySheet = forwardRef<StatEntrySheetRef, Props>(function Stat
   const [value, setValue] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
-  const [requested, setRequested] = useState<VerifyMethod | null>(null);
+  const [requested, setRequested] = useState<RequestedMethod | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
 
   useImperativeHandle(ref, () => ({
     present: (stat?: PlayerStat) => {
       setRequested(null);
       setError(null);
+      setVerifyError(null);
       if (stat) {
         setEditing(stat);
         setSport(stat.metric.sport as Sport);
@@ -109,18 +114,38 @@ export const StatEntrySheet = forwardRef<StatEntrySheetRef, Props>(function Stat
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) throw authError ?? new Error('You need to be signed in to save a stat.');
-      const { error: saveError } = await supabase.from('player_stats').upsert(
-        {
-          profile_id: user.id,
-          metric_id: metric.id,
-          value: numericValue,
-          notes: notes.trim() ? notes.trim() : null,
-          verified: false,
-          verification_method: 'self_reported',
-        },
-        { onConflict: 'profile_id,metric_id' },
-      );
-      if (saveError) throw saveError;
+
+      const trimmedNotes = notes.trim() ? notes.trim() : null;
+
+      // `verified` / `verification_method` are server-controlled (locked in 0008),
+      // so the client only ever writes value + notes. Find the existing row for
+      // this metric (unique key is profile_id+metric_id) and update it; otherwise
+      // insert a fresh self-reported mark (column defaults + trigger fill the rest).
+      let statId = editing?.id ?? null;
+      if (!statId) {
+        const { data: existing, error: findError } = await supabase
+          .from('player_stats')
+          .select('id')
+          .eq('profile_id', user.id)
+          .eq('metric_id', metric.id)
+          .maybeSingle();
+        if (findError) throw findError;
+        statId = (existing as { id: string } | null)?.id ?? null;
+      }
+
+      if (statId) {
+        const { error: updateError } = await supabase
+          .from('player_stats')
+          .update({ value: numericValue, notes: trimmedNotes })
+          .eq('id', statId);
+        if (updateError) throw updateError;
+      } else {
+        const { error: insertError } = await supabase
+          .from('player_stats')
+          .insert({ profile_id: user.id, metric_id: metric.id, value: numericValue, notes: trimmedNotes });
+        if (insertError) throw insertError;
+      }
+
       // Only confirm and dismiss once the write actually succeeded.
       onSaved();
       modalRef.current?.dismiss();
@@ -131,30 +156,51 @@ export const StatEntrySheet = forwardRef<StatEntrySheetRef, Props>(function Stat
     }
   };
 
-  const requestVerification = async (method: VerifyMethod) => {
+  // Log a verification_request row. Never writes the locked trust columns —
+  // `verified` / `verification_method` change only via the cosign_stat RPC.
+  const logRequest = async (method: RequestedMethod): Promise<void> => {
+    if (!editing) return;
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) throw authError ?? new Error('You need to be signed in.');
+    const { error: requestError } = await supabase
+      .from('verification_requests')
+      .insert({ stat_id: editing.id, requester_id: user.id, method });
+    if (requestError) throw requestError;
+  };
+
+  // The growth loop: log a peer-cosign request, then hand the owner a shareable
+  // deep link. Whoever opens it lands on the confirm screen and must be (or
+  // become) a same-school user to co-sign — which pulls a teammate into the app.
+  const askTeammate = async () => {
     if (!editing) return;
     Haptics.selectionAsync();
+    setVerifyError(null);
     try {
-      if (method === 'video_proof') {
-        const res = await DocumentPicker.getDocumentAsync({ type: 'video/*', copyToCacheDirectory: false });
-        if (res.canceled) return;
-        // The picked file is a local placeholder only — nothing is uploaded.
-      }
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      await supabase.from('verification_requests').insert({
-        stat_id: editing.id,
-        requester_id: user.id,
-        method,
+      await logRequest('peer_cosign');
+      setRequested('peer_cosign');
+      const url = Linking.createURL(`/confirm/${editing.id}`);
+      await Share.share({
+        message: `Confirm my ${editing.metric.label} on Elevate — you have to be at my school to co-sign it. ${url}`,
+        url,
       });
-      await supabase
-        .from('player_stats')
-        .update({ verification_method: method })
-        .eq('id', editing.id);
-      setRequested(method);
-      onSaved();
-    } catch {
-      // Best-effort stub; no real verification happens.
+    } catch (e) {
+      setVerifyError(e instanceof Error ? e.message : "Couldn't start that invite. Try again.");
+    }
+  };
+
+  const uploadVideoProof = async () => {
+    if (!editing) return;
+    Haptics.selectionAsync();
+    setVerifyError(null);
+    try {
+      const res = await DocumentPicker.getDocumentAsync({ type: 'video/*', copyToCacheDirectory: false });
+      if (res.canceled) return;
+      // The picked file is a local placeholder only — nothing is uploaded. We log
+      // the request; a teammate's co-sign is still what turns a mark Verified.
+      await logRequest('video_proof');
+      setRequested('video_proof');
+    } catch (e) {
+      setVerifyError(e instanceof Error ? e.message : "Couldn't log that. Try again.");
     }
   };
 
@@ -295,25 +341,43 @@ export const StatEntrySheet = forwardRef<StatEntrySheetRef, Props>(function Stat
               </Txt>
             )}
 
-            {/* Verification (edit mode, unverified only) */}
+            {/* Verification (edit mode, unverified only). Peer co-sign is the
+                only path that turns a mark Verified — the rest is honest about
+                not being live yet. */}
             {editing && !editing.verified && (
               <View style={{ marginTop: space[8] }}>
                 <HairlineRule />
                 <View style={{ marginTop: space[6] }}>
-                  <MicroLabel>GET THIS VERIFIED TO RANK</MicroLabel>
-                  {requested ? (
-                    <Txt variant="bodyLg" italic tone="ash" style={{ marginTop: space[4], fontFamily: 'InstrumentSerifItalic' }}>
-                      Request submitted. We'll mark it once it's confirmed.
-                    </Txt>
-                  ) : (
-                    <View style={{ marginTop: space[4], gap: space[3] }}>
-                      <PrimaryButton label="UPLOAD VIDEO PROOF" variant="ghost" full onPress={() => requestVerification('video_proof')} />
-                      <PrimaryButton label="ASK A COACH TO CONFIRM" variant="ghost" full onPress={() => requestVerification('coach_cosign')} />
-                      <PrimaryButton label="ASK A TEAMMATE TO CONFIRM" variant="ghost" full onPress={() => requestVerification('peer_cosign')} />
-                      <View style={{ opacity: 0.4 }}>
-                        <PrimaryButton label="EXTERNAL SOURCE · COMING SOON" variant="ghost" full disabled onPress={() => undefined} />
-                      </View>
+                  <MicroLabel>VERIFY THIS MARK</MicroLabel>
+                  <Txt variant="bodySm" tone="ash" style={{ marginTop: space[2], lineHeight: 18 }}>
+                    Self-reported until a teammate at your school confirms it. One co-sign turns it Verified.
+                  </Txt>
+
+                  <View style={{ marginTop: space[5], gap: space[3] }}>
+                    <PrimaryButton label="ASK A TEAMMATE TO CONFIRM" full onPress={askTeammate} />
+                    <PrimaryButton label="UPLOAD VIDEO PROOF" variant="ghost" full onPress={uploadVideoProof} />
+                    <View style={{ opacity: 0.4 }}>
+                      <PrimaryButton label="ASK A COACH · COMING LATER" variant="ghost" full disabled onPress={() => undefined} />
                     </View>
+                    <View style={{ opacity: 0.4 }}>
+                      <PrimaryButton label="EXTERNAL SOURCE · COMING LATER" variant="ghost" full disabled onPress={() => undefined} />
+                    </View>
+                  </View>
+
+                  {requested === 'peer_cosign' && (
+                    <Txt variant="bodySm" italic tone="ash" style={{ marginTop: space[4], fontFamily: 'InstrumentSerifItalic' }}>
+                      Invite shared. When a teammate at your school opens it and co-signs, this mark goes Verified.
+                    </Txt>
+                  )}
+                  {requested === 'video_proof' && (
+                    <Txt variant="bodySm" italic tone="ash" style={{ marginTop: space[4], fontFamily: 'InstrumentSerifItalic' }}>
+                      Logged — but a teammate's co-sign is what turns a mark Verified for now.
+                    </Txt>
+                  )}
+                  {verifyError && (
+                    <Txt variant="bodySm" tone="ink" style={{ marginTop: space[3] }} accessibilityLiveRegion="polite">
+                      {verifyError}
+                    </Txt>
                   )}
                 </View>
               </View>

@@ -183,6 +183,14 @@ function ThemedRoot() {
           name="player/[id]"
           options={{ animation: 'slide_from_bottom', presentation: 'card' }}
         />
+        <Stack.Screen
+          name="confirm/[statId]"
+          options={{ animation: 'slide_from_bottom', presentation: 'card' }}
+        />
+        <Stack.Screen
+          name="confirm/index"
+          options={{ animation: 'slide_from_bottom', presentation: 'card' }}
+        />
         <Stack.Screen name="onboarding/index" options={{ animation: 'fade' }} />
         <Stack.Screen name="splash" options={{ animation: 'fade' }} />
       </Stack>

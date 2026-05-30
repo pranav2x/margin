@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { View, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { captureRef } from 'react-native-view-shot';
@@ -35,6 +36,7 @@ export default function YouScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const profileQ = useMyProfile();
   const statsQ = useMyStats();
@@ -137,15 +139,26 @@ export default function YouScreen() {
             </Txt>
             {metaLine.length > 0 && <MicroLabel style={{ marginTop: space[4] }}>{metaLine}</MicroLabel>}
 
-            <Pressable
-              onPress={() => editRef.current?.present()}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Edit your profile"
-              style={{ marginTop: space[5], minHeight: 44, justifyContent: 'center' }}
-            >
-              <MicroLabel tone="ink">EDIT PROFILE</MicroLabel>
-            </Pressable>
+            <View style={{ marginTop: space[5], flexDirection: 'row', alignItems: 'center', gap: space[6] }}>
+              <Pressable
+                onPress={() => editRef.current?.present()}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Edit your profile"
+                style={{ minHeight: 44, justifyContent: 'center' }}
+              >
+                <MicroLabel tone="ink">EDIT PROFILE</MicroLabel>
+              </Pressable>
+              <Pressable
+                onPress={() => { Haptics.selectionAsync(); router.push('/confirm'); }}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Confirm teammates' marks"
+                style={{ minHeight: 44, justifyContent: 'center' }}
+              >
+                <MicroLabel tone="ink">CONFIRM TEAMMATES</MicroLabel>
+              </Pressable>
+            </View>
           </View>
 
           {/* Headline number */}
