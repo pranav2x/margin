@@ -2,6 +2,7 @@ import { View, StyleSheet } from 'react-native';
 import { Score } from '../motion/Score';
 import { MicroLabel } from '../primitives/MicroLabel';
 import { AppIcon } from '../primitives/AppIcon';
+import { Txt } from '../primitives/Text';
 import { useTheme, space } from '../../theme';
 import type { StreakData } from '../../lib/hooks/useStreak';
 
@@ -47,6 +48,33 @@ export function StreakBlock({ streak }: Props) {
             <MicroLabel tone={d.isToday ? 'ink' : 'ash'}>{d.label}</MicroLabel>
           </View>
         ))}
+      </View>
+
+      {/* Freeze meter — surfaces the consumable that bridges a single missed
+          day. The user never spends one manually: record_activity() auto-
+          spends a freeze when the gap is exactly one day. We show the count
+          so the safety net is visible, not a black box. */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: space[2],
+          marginTop: space[4],
+          paddingTop: space[3],
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: colors.fog,
+        }}
+      >
+        <AppIcon name="Snowflake" size={16} tone="ash" />
+        <Txt variant="bodySm" weight="semibold">
+          {streak.freezes}
+        </Txt>
+        <Txt variant="bodySm" tone="ash" style={{ flex: 1 }}>
+          {streak.freezes === 1 ? 'freeze' : 'freezes'} ·{' '}
+          {streak.freezes > 0
+            ? 'auto-bridges a missed day'
+            : 'a missed day will reset your run'}
+        </Txt>
       </View>
     </View>
   );
