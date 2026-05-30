@@ -5,14 +5,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
+import { Flame } from 'lucide-react-native';
 
 import { Txt } from '../../components/primitives/Text';
 import { MicroLabel } from '../../components/primitives/MicroLabel';
 import { HairlineRule } from '../../components/primitives/HairlineRule';
 import { PrimaryButton } from '../../components/primitives/PrimaryButton';
 import { TabPill } from '../../components/composite/TabPill';
+import { Score } from '../../components/motion/Score';
 import { useTheme, space, SCREEN_PADDING, fonts } from '../../theme';
 import { supabase } from '../../lib/supabase';
+import { recordActivity } from '../../lib/hooks/useStreak';
 
 interface School {
   id: string;
@@ -38,6 +41,7 @@ export default function Onboarding() {
   const queryClient = useQueryClient();
 
   const [step, setStep] = useState<0 | 1>(0);
+  const [committed, setCommitted] = useState(false);
   const [myId, setMyId] = useState<string | null>(null);
 
   // Step 0 — identity
@@ -175,12 +179,54 @@ export default function Onboarding() {
       // Only flip the route guard forward once the profile write succeeded —
       // otherwise the guard bounces straight back to onboarding.
       await queryClient.invalidateQueries({ queryKey: ['auth-gate'] });
-      router.replace('/(tabs)/you');
+      // Day 1: the user is already authenticated here, so seed their first
+      // activity day now. Fire-and-forget — a streak hiccup must never block
+      // finishing onboarding. Then hand them the commitment beat before tabs.
+      void recordActivity(queryClient);
+      setCommitted(true);
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : "Couldn't finish setting up. Try again.");
       setSaving(false);
     }
   };
+
+  // ── Commitment beat: streak Day 1 ─────────────────────────
+  // Shown once the profile write lands (and Day 1 is seeded). The route guard
+  // already reads onboarded=true, so it won't yank us off this screen; we hold
+  // here until the athlete taps in, then hand off to the tabs.
+  if (committed) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top }}>
+        <View style={{ flex: 1, paddingHorizontal: SCREEN_PADDING, justifyContent: 'center' }}>
+          {/* Sanctioned ember celebration: the flame + Day 1 numeral. */}
+          <Flame size={48} color={colors.ember} strokeWidth={1.5} />
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', marginTop: space[5] }}>
+            <Score value={1} size="xl" style={{ color: colors.ember }} />
+            <MicroLabel style={{ marginLeft: space[3], marginBottom: space[2] }}>DAY STREAK</MicroLabel>
+          </View>
+          <Txt variant="display2" style={{ marginTop: space[5], fontSize: 44, lineHeight: 48 }}>
+            Your streak{' '}
+            <Txt variant="display2" italic style={{ fontFamily: 'InstrumentSerifItalic', fontSize: 44, lineHeight: 48 }}>
+              starts now.
+            </Txt>
+          </Txt>
+          <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[4], lineHeight: 26 }}>
+            Show up tomorrow — add a stat, co-sign a teammate, or file a battle — to keep it lit. Miss a day and a freeze has your back.
+          </Txt>
+        </View>
+        <View style={{ position: 'absolute', left: SCREEN_PADDING, right: SCREEN_PADDING, bottom: insets.bottom + space[5] }}>
+          <PrimaryButton
+            label="START MY STREAK"
+            full
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              router.replace('/(tabs)/you');
+            }}
+          />
+        </View>
+      </View>
+    );
+  }
 
   // ── Step 0: identity ──────────────────────────────────────
   if (step === 0) {

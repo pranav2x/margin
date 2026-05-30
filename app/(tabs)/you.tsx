@@ -7,6 +7,7 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import * as Haptics from 'expo-haptics';
+import { MotiView } from 'moti';
 
 import { Txt } from '../../components/primitives/Text';
 import { MicroLabel } from '../../components/primitives/MicroLabel';
@@ -21,6 +22,7 @@ import { ShareCard, type HeadlineStat } from '../../components/composite/ShareCa
 import { StatEntrySheet, type StatEntrySheetRef } from '../../components/composite/StatEntrySheet';
 import { ProfileEditSheet, type ProfileEditSheetRef } from '../../components/composite/ProfileEditSheet';
 import { StreakBlock } from '../../components/composite/StreakBlock';
+import { StreakMilestoneCard } from '../../components/composite/StreakMilestoneCard';
 import {
   SPORTS,
   SPORT_LABELS,
@@ -49,6 +51,7 @@ export default function YouScreen() {
   const sheetRef = useRef<StatEntrySheetRef>(null);
   const editRef = useRef<ProfileEditSheetRef>(null);
   const cardRef = useRef<View>(null);
+  const milestoneRef = useRef<View>(null);
 
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
@@ -67,6 +70,9 @@ export default function YouScreen() {
   const profile = profileQ.data;
   const stats = useMemo(() => statsQ.data ?? [], [statsQ.data]);
   const streak = streakQ.data ?? null;
+  // Celebrate the moment a streak lands on a milestone (the card shows that day,
+  // then steps back to the normal flame once the count moves past it).
+  const milestone = streak && [7, 14, 30].includes(streak.current) ? streak.current : null;
 
   const grouped = useMemo(() => {
     const map = new Map<string, PlayerStat[]>();
@@ -111,6 +117,18 @@ export default function YouScreen() {
       }
     } catch {
       // Capture/share unavailable (e.g. simulator without share targets) — no-op.
+    }
+  };
+
+  const shareMilestone = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      const uri = await captureRef(milestoneRef, { format: 'png', quality: 1 });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share your streak' });
+      }
+    } catch {
+      // Capture/share unavailable — no-op.
     }
   };
 
@@ -168,14 +186,31 @@ export default function YouScreen() {
             </View>
           </View>
 
-          {/* Active streak — the flame numeral is a sanctioned ember accent; the
-              7-day strip stays monochrome. Hidden when there's no live streak so
-              a lapsed athlete is never guilted and the accent is never faked. */}
-          {streak && streak.current >= 1 && (
+          {/* Active streak. The flame numeral is a sanctioned ember accent and
+              the 7-day strip stays monochrome. At a 7/14/30 milestone the block
+              becomes a shareable ember celebration that flashes in. Hidden when
+              there's no live streak so a lapsed athlete is never guilted. */}
+          {milestone ? (
+            <MotiView
+              from={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: 'timing', duration: 320 }}
+              style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[7] }}
+            >
+              <StreakMilestoneCard
+                ref={milestoneRef}
+                handle={handle}
+                days={milestone}
+                school={profile?.school?.name ?? null}
+                sportLabel={sportLabel}
+              />
+              <PrimaryButton label="SHARE STREAK" variant="ghost" full onPress={shareMilestone} style={{ marginTop: space[4] }} />
+            </MotiView>
+          ) : streak && streak.current >= 1 ? (
             <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[7] }}>
               <StreakBlock streak={streak} />
             </View>
-          )}
+          ) : null}
           {/* Headline number */}
           {top ? (
             <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[7] }}>
