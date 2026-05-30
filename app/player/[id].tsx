@@ -222,7 +222,9 @@ export default function PlayerProfile() {
 
         {grouped.length === 0 ? (
           <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[5] }}>
-            <Txt variant="bodyLg" tone="ash">No stats on the board yet.</Txt>
+            <Txt variant="display4" italic tone="ash" style={{ fontFamily: 'InstrumentSerifItalic' }}>
+              No marks on this board yet.
+            </Txt>
           </View>
         ) : (
           grouped.map((group) => (

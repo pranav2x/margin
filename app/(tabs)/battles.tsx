@@ -218,8 +218,21 @@ export default function BattlesScreen() {
           {!mySport ? (
             <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8] }}>
               <Txt variant="display4" italic tone="ash" style={{ fontFamily: 'InstrumentSerifItalic' }}>
-                Set your primary sport on the You tab to battle.
+                A battle needs a sport.
               </Txt>
+              <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
+                Pick your primary sport so we can line up like-for-like marks.
+              </Txt>
+              <View style={{ marginTop: space[5] }}>
+                <PrimaryButton
+                  label="SET YOUR SPORT"
+                  full
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    router.push('/(tabs)/you?edit=1' as never);
+                  }}
+                />
+              </View>
             </View>
           ) : (
             <>
@@ -272,7 +285,33 @@ export default function BattlesScreen() {
               <HairlineRule />
               {(schoolQ.data ?? []).length === 0 ? (
                 <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[5] }}>
-                  <Txt variant="bodyLg" tone="ash">No teammates on the board yet.</Txt>
+                  {me?.school_id ? (
+                    <>
+                      <Txt variant="display4" italic tone="ash" style={{ fontFamily: 'InstrumentSerifItalic' }}>
+                        First name on the wall.
+                      </Txt>
+                      <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
+                        Send your share card to a teammate — they sign up, they show up here.
+                      </Txt>
+                    </>
+                  ) : (
+                    <>
+                      <Txt variant="display4" italic tone="ash" style={{ fontFamily: 'InstrumentSerifItalic' }}>
+                        Pick your school to find teammates.
+                      </Txt>
+                      <View style={{ marginTop: space[4] }}>
+                        <PrimaryButton
+                          label="PICK YOUR SCHOOL"
+                          variant="ghost"
+                          full
+                          onPress={() => {
+                            Haptics.selectionAsync();
+                            router.push('/(tabs)/you?edit=1' as never);
+                          }}
+                        />
+                      </View>
+                    </>
+                  )}
                 </View>
               ) : (
                 (schoolQ.data ?? []).map((p, i) => (

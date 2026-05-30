@@ -13,11 +13,13 @@ import { Score } from '../../components/motion/Score';
 import { TabPill } from '../../components/composite/TabPill';
 import { VerifiedMark } from '../../components/composite/StatLine';
 import { supabase } from '../../lib/supabase';
+import { PrimaryButton } from '../../components/primitives/PrimaryButton';
 import {
   SPORTS,
   SPORT_LABELS,
   formatStatValue,
   useMetricCatalog,
+  useMyProfile,
   type Sport,
 } from '../../lib/hooks/usePlayerProfile';
 import { useTheme, space, SCREEN_PADDING } from '../../theme';
@@ -82,6 +84,8 @@ export default function BoardsScreen() {
   const [verifiedOnly, setVerifiedOnly] = useState(false);
 
   const catalogQ = useMetricCatalog();
+  const profileQ = useMyProfile();
+  const needsSchool = (scope === 'school' || scope === 'nearby') && !profileQ.data?.school_id;
   const metricsForSport = useMemo(
     () => (catalogQ.data ?? []).filter((m) => m.sport === sport).sort((a, b) => a.sort_order - b.sort_order),
     [catalogQ.data, sport],
@@ -241,12 +245,48 @@ export default function BoardsScreen() {
         ListEmptyComponent={
           !boardQ.isLoading ? (
             <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[10], alignItems: 'flex-start' }}>
-              <Txt variant="display4" italic tone="ash" style={{ fontSize: 20, fontFamily: 'InstrumentSerifItalic' }}>
-                {verifiedOnly ? 'No verified marks yet.' : 'No marks here yet.'}
-              </Txt>
-              <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
-                {verifiedOnly ? 'Turn off verified-only to see self-reported marks.' : 'Be the first name on this board.'}
-              </Txt>
+              {needsSchool ? (
+                <>
+                  <Txt variant="display4" italic tone="ash" style={{ fontSize: 20, fontFamily: 'InstrumentSerifItalic' }}>
+                    Pick your school to see this board.
+                  </Txt>
+                  <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
+                    {scope === 'nearby' ? 'Nearby pulls from schools around yours.' : 'School scope ranks the kids you actually line up against.'}
+                  </Txt>
+                  <View style={{ marginTop: space[5], alignSelf: 'stretch' }}>
+                    <PrimaryButton
+                      label="PICK YOUR SCHOOL"
+                      full
+                      onPress={() => router.push('/(tabs)/you?edit=1' as never)}
+                    />
+                  </View>
+                </>
+              ) : verifiedOnly ? (
+                <>
+                  <Txt variant="display4" italic tone="ash" style={{ fontSize: 20, fontFamily: 'InstrumentSerifItalic' }}>
+                    No verified marks yet.
+                  </Txt>
+                  <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
+                    Turn off verified-only to see self-reported marks while teammates co-sign.
+                  </Txt>
+                </>
+              ) : (
+                <>
+                  <Txt variant="display4" italic tone="ash" style={{ fontSize: 20, fontFamily: 'InstrumentSerifItalic' }}>
+                    Be the first name on this board.
+                  </Txt>
+                  <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
+                    Drop a mark on the You tab — it lands here the second you save.
+                  </Txt>
+                  <View style={{ marginTop: space[5], alignSelf: 'stretch' }}>
+                    <PrimaryButton
+                      label="ADD YOUR FIRST MARK"
+                      full
+                      onPress={() => router.push('/(tabs)/you' as never)}
+                    />
+                  </View>
+                </>
+              )}
             </View>
           ) : null
         }

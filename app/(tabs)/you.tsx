@@ -1,7 +1,7 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { View, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { captureRef } from 'react-native-view-shot';
@@ -55,6 +55,16 @@ export default function YouScreen() {
 
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
+
+  // Other tabs route here with `?edit=1` when the user has a missing profile
+  // field that blocks them (no sport, no school). Open the editor once on land.
+  const params = useLocalSearchParams<{ edit?: string }>();
+  useEffect(() => {
+    if (params.edit === '1') {
+      const t = setTimeout(() => editRef.current?.present(), 250);
+      return () => clearTimeout(t);
+    }
+  }, [params.edit]);
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -248,7 +258,12 @@ export default function YouScreen() {
 
           {grouped.length === 0 ? (
             <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[5] }}>
-              <Txt variant="bodyLg" tone="ash">Nothing on the board yet.</Txt>
+              <Txt variant="display4" italic tone="ash" style={{ fontFamily: 'InstrumentSerifItalic' }}>
+                Your board is a blank page.
+              </Txt>
+              <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
+                Add your first mark below — a teammate can co-sign it later.
+              </Txt>
             </View>
           ) : (
             // Grouped stat rows sit one elevation step up (paper → surface); the
