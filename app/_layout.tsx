@@ -181,6 +181,8 @@ function ThemedRoot() {
         <Stack.Screen name="takes/new" options={{ animation: 'slide_from_bottom', presentation: 'card' }} />
         <Stack.Screen name="clips/new" options={{ animation: 'slide_from_bottom', presentation: 'card' }} />
         <Stack.Screen name="clips/[id]" options={{ animation: 'slide_from_bottom', presentation: 'card' }} />
+        {/* Phase 0 golden reference screens — /golden, /golden/boards, /golden/you. */}
+        <Stack.Screen name="golden" options={{ animation: 'slide_from_right' }} />
       </Stack>
     </View>
   );

@@ -54,8 +54,10 @@ export function LeaderboardRow({ row, unit, isCurrentUser = false, onPress }: Pr
         alignItems: 'center',
         paddingHorizontal: SCREEN_PADDING,
         minHeight: 64,
+        // Current-user row sits on `overlay` (one step above the list bg);
+        // pressed state lifts to `surface`. Depth = lighter, never shadowed.
         backgroundColor: isCurrentUser
-          ? colors.surface
+          ? colors.overlay
           : pressed
             ? colors.surface
             : colors.paper,

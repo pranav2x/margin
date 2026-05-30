@@ -1,20 +1,22 @@
 import { type ReactNode } from 'react';
 import { View, type ViewStyle } from 'react-native';
 import { PressableScale } from './PressableScale';
-import { space, useTheme } from '../../theme';
+import { space, radius, useTheme } from '../../theme';
 
 interface Props {
   children: ReactNode;
   padded?: boolean;
   pressable?: boolean;
   onPress?: () => void;
-  tone?: 'surface' | 'paper';
+  /** Elevation tier. `paper` = bg, `surface` = raised card, `overlay` = nested. */
+  tone?: 'paper' | 'surface' | 'overlay';
   style?: ViewStyle;
 }
 
 /**
- * Strava-style rounded container. radius=12, 1px fog border, surface bg.
- * `padded` adds 16px inset; `pressable` wraps in PressableScale.
+ * Rounded container, `radius.lg` (16) by spec. Elevation is the lighter
+ * surface beneath — no shadow, no border. `padded` adds 16px inset;
+ * `pressable` wraps in PressableScale.
  */
 export function Card({
   children,
@@ -25,11 +27,11 @@ export function Card({
   style,
 }: Props) {
   const { colors } = useTheme();
+  const bg =
+    tone === 'paper' ? colors.paper : tone === 'overlay' ? colors.overlay : colors.surface;
   const containerStyle: ViewStyle = {
-    backgroundColor: tone === 'paper' ? colors.paper : colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.fog,
+    backgroundColor: bg,
+    borderRadius: radius.lg,
     padding: padded ? space[4] : 0,
     overflow: 'hidden',
   };

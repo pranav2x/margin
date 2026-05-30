@@ -5,11 +5,10 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  Easing,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Txt } from './Text';
-import { useTheme, space } from '../../theme';
+import { useTheme, space, radius, motion } from '../../theme';
 
 /**
  * Segmented — 2-5 option segmented control with a sliding ink pill.
@@ -19,8 +18,6 @@ import { useTheme, space } from '../../theme';
  * between positions so the eye can follow scope changes (My School ↔
  * Nearby ↔ Everyone).
  */
-
-const EASING = Easing.bezier(0.22, 1, 0.36, 1);
 
 interface Option<T extends string> {
   key: T;
@@ -44,7 +41,10 @@ export function Segmented<T extends string>({ options, value, onChange }: Props<
   const x = useSharedValue(activeIndex * segmentWidth);
 
   useEffect(() => {
-    x.value = withTiming(activeIndex * segmentWidth, { duration: 180, easing: EASING });
+    x.value = withTiming(activeIndex * segmentWidth, {
+      duration: motion.fast,
+      easing: motion.easeOut,
+    });
   }, [activeIndex, segmentWidth, x]);
 
   const pillStyle = useAnimatedStyle(() => ({
@@ -58,10 +58,8 @@ export function Segmented<T extends string>({ options, value, onChange }: Props<
       style={{
         flexDirection: 'row',
         backgroundColor: colors.surface,
-        borderRadius: 999,
+        borderRadius: radius.full,
         padding: 2,
-        borderWidth: 1,
-        borderColor: colors.fog,
         height: 40,
         position: 'relative',
       }}
@@ -74,10 +72,9 @@ export function Segmented<T extends string>({ options, value, onChange }: Props<
               top: 2,
               left: 2,
               bottom: 2,
-              borderRadius: 999,
-              backgroundColor: colors.paper,
-              borderWidth: 1,
-              borderColor: colors.fog,
+              borderRadius: radius.full,
+              // Active pill is LIGHTER than its rail (depth via elevation, not shadow).
+              backgroundColor: colors.overlay,
             },
             pillStyle,
           ]}
