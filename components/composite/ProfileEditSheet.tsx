@@ -1,11 +1,13 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { View, Pressable, Text, ActivityIndicator } from 'react-native';
+import { Alert, View, Pressable, ScrollView, ActivityIndicator, type TextStyle } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetBackdrop,
   BottomSheetScrollView,
   BottomSheetTextInput,
+  BottomSheetFooter,
   type BottomSheetBackdropProps,
+  type BottomSheetFooterProps,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -16,7 +18,9 @@ import { MicroLabel } from '../primitives/MicroLabel';
 import { HairlineRule } from '../primitives/HairlineRule';
 import { PrimaryButton } from '../primitives/PrimaryButton';
 import { Avatar } from '../primitives/Avatar';
-import { useTheme, space, SCREEN_PADDING, fonts } from '../../theme';
+import { Card } from '../primitives/Card';
+import { AppIcon } from '../primitives/AppIcon';
+import { useTheme, space, SCREEN_PADDING, type as typeScale } from '../../theme';
 import { supabase } from '../../lib/supabase';
 import { SPORTS, SPORT_LABELS, type MyProfile, type Sport } from '../../lib/hooks/usePlayerProfile';
 
@@ -40,6 +44,8 @@ function locality(s: { city: string | null; state: string | null }): string {
   return [s.city, s.state].filter(Boolean).join(', ');
 }
 
+const CURRENT_YEAR = new Date().getFullYear();
+
 export const ProfileEditSheet = forwardRef<ProfileEditSheetRef, Props>(function ProfileEditSheet(
   { profile, onSaved },
   ref,
@@ -51,6 +57,7 @@ export const ProfileEditSheet = forwardRef<ProfileEditSheetRef, Props>(function 
   const [displayName, setDisplayName] = useState('');
   const [sport, setSport] = useState<Sport | null>(null);
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [gradYear, setGradYear] = useState('');
   const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
 
   // School picker (mirrors the onboarding nearby + manual-search flow).
@@ -69,6 +76,7 @@ export const ProfileEditSheet = forwardRef<ProfileEditSheetRef, Props>(function 
       setDisplayName(profile?.display_name ?? '');
       setSport((profile?.primary_sport as Sport) ?? null);
       setAvatarUrl(profile?.avatar_url ?? '');
+      setGradYear(profile?.grad_year != null ? String(profile.grad_year) : '');
       setSelectedSchool(
         profile?.school_id
           ? {
@@ -148,7 +156,15 @@ export const ProfileEditSheet = forwardRef<ProfileEditSheetRef, Props>(function 
     setNearby([]);
   };
 
+  // Grad year is plausible if it parses to a 4-digit year not absurdly far out.
+  // Server side accepts null too — empty string clears it.
+  const gradYearNum = gradYear.trim() ? Number(gradYear.trim()) : null;
+  const gradYearValid =
+    gradYearNum == null ||
+    (Number.isInteger(gradYearNum) && gradYearNum >= CURRENT_YEAR - 12 && gradYearNum <= CURRENT_YEAR + 12);
+
   const save = async () => {
+    if (!gradYearValid) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSaving(true);
     setError(null);
@@ -162,6 +178,7 @@ export const ProfileEditSheet = forwardRef<ProfileEditSheetRef, Props>(function 
           primary_sport: sport,
           school_id: selectedSchool ? selectedSchool.id : null,
           avatar_url: avatarUrl.trim() ? avatarUrl.trim() : null,
+          grad_year: gradYearNum,
         })
         .eq('id', user.id);
       if (saveError) throw saveError;
@@ -175,8 +192,63 @@ export const ProfileEditSheet = forwardRef<ProfileEditSheetRef, Props>(function 
     }
   };
 
+  const close = () => {
+    Haptics.selectionAsync();
+    modalRef.current?.dismiss();
+  };
+
+  const onChangeAvatar = () => {
+    Haptics.selectionAsync();
+    // Native picker isn't wired yet — URL input below is the working path.
+    Alert.alert('Change avatar', 'Paste an image URL below — a native picker is coming.');
+  };
+
   const schoolList = query.trim().length >= 2 ? results : nearby;
   const previewUri = avatarUrl.trim() ? avatarUrl.trim() : undefined;
+
+  const nameInputStyle: TextStyle = {
+    ...typeScale.bodyLg,
+    color: colors.ink,
+    paddingVertical: space[2],
+  };
+  const urlInputStyle: TextStyle = {
+    ...typeScale.body,
+    color: colors.ink,
+    paddingVertical: space[2],
+  };
+  const gradInputStyle: TextStyle = {
+    ...typeScale.scoreMd,
+    color: colors.ink,
+    paddingVertical: space[2],
+  };
+  const searchInputStyle: TextStyle = {
+    ...typeScale.bodyLg,
+    color: colors.ink,
+    paddingVertical: space[2],
+  };
+
+  const canSave = !saving && gradYearValid;
+
+  const renderFooter = useCallback(
+    (props: BottomSheetFooterProps) => (
+      <BottomSheetFooter {...props} bottomInset={insets.bottom}>
+        <View
+          style={{
+            paddingHorizontal: SCREEN_PADDING,
+            paddingTop: space[4],
+            paddingBottom: space[4],
+            backgroundColor: colors.paper,
+            borderTopWidth: 1,
+            borderTopColor: colors.fog,
+          }}
+        >
+          <PrimaryButton label={saving ? 'SAVING…' : 'SAVE'} full onPress={save} disabled={!canSave} />
+        </View>
+      </BottomSheetFooter>
+    ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [insets.bottom, colors.paper, colors.fog, saving, canSave],
+  );
 
   return (
     <BottomSheetModal
@@ -184,143 +256,217 @@ export const ProfileEditSheet = forwardRef<ProfileEditSheetRef, Props>(function 
       snapPoints={snapPoints}
       enablePanDownToClose
       backdropComponent={renderBackdrop}
-      backgroundStyle={{ backgroundColor: colors.surface, borderRadius: 0 }}
-      handleIndicatorStyle={{ backgroundColor: colors.ash }}
+      footerComponent={renderFooter}
+      backgroundStyle={{ backgroundColor: colors.paper, borderRadius: space[4] }}
+      handleIndicatorStyle={{ backgroundColor: colors.fog, width: 36, height: 4 }}
     >
+      {/* Header */}
+      <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[2], paddingBottom: space[4] }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Txt variant="display4">Edit Profile</Txt>
+          <Pressable
+            onPress={close}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+            hitSlop={12}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: colors.surface,
+            }}
+          >
+            <AppIcon name="X" size={20} tone="ink" />
+          </Pressable>
+        </View>
+      </View>
+      <HairlineRule />
+
       <BottomSheetScrollView
-        contentContainerStyle={{ paddingHorizontal: SCREEN_PADDING, paddingBottom: insets.bottom + space[8] }}
+        contentContainerStyle={{
+          paddingHorizontal: SCREEN_PADDING,
+          paddingTop: space[5],
+          paddingBottom: insets.bottom + space[10],
+        }}
         keyboardShouldPersistTaps="handled"
       >
-        <MicroLabel>EDIT PROFILE</MicroLabel>
-
-        {/* Avatar preview + URL */}
-        <View style={{ marginTop: space[5], alignItems: 'center' }}>
-          <Avatar uri={previewUri} size={88} />
+        {/* AVATAR */}
+        <View>
+          <MicroLabel tone="ash">AVATAR</MicroLabel>
+          <View
+            style={{
+              marginTop: space[3],
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: space[4],
+            }}
+          >
+            <Avatar uri={previewUri} size={96} />
+            <View style={{ flex: 1 }}>
+              <PrimaryButton label="CHANGE AVATAR" variant="ghost" onPress={onChangeAvatar} full />
+            </View>
+          </View>
+          {/* The native picker isn't wired — URL paste is the actual working
+              path. Kept dense beneath the row so behavior is unchanged. */}
+          <Card padded style={{ marginTop: space[3] }}>
+            <MicroLabel tone="ash">IMAGE URL</MicroLabel>
+            <BottomSheetTextInput
+              value={avatarUrl}
+              onChangeText={setAvatarUrl}
+              placeholder="https://…"
+              placeholderTextColor={colors.ash}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              style={urlInputStyle}
+            />
+          </Card>
         </View>
+
+        {/* NAME */}
         <View style={{ marginTop: space[5] }}>
-          <MicroLabel>AVATAR · IMAGE LINK</MicroLabel>
-          <BottomSheetTextInput
-            value={avatarUrl}
-            onChangeText={setAvatarUrl}
-            placeholder="https://…"
-            placeholderTextColor={colors.ash}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="url"
-            style={{ fontFamily: fonts.medium, fontSize: 16, lineHeight: 22, color: colors.ink, paddingVertical: space[2] }}
-          />
-          <HairlineRule />
+          <MicroLabel tone="ash">NAME</MicroLabel>
+          <Card padded style={{ marginTop: space[3] }}>
+            <BottomSheetTextInput
+              value={displayName}
+              onChangeText={setDisplayName}
+              placeholder="Your name"
+              placeholderTextColor={colors.ash}
+              autoCapitalize="words"
+              style={nameInputStyle}
+            />
+          </Card>
         </View>
 
-        {/* Display name */}
-        <View style={{ marginTop: space[7] }}>
-          <MicroLabel>DISPLAY NAME</MicroLabel>
-          <BottomSheetTextInput
-            value={displayName}
-            onChangeText={setDisplayName}
-            placeholder="Your name"
-            placeholderTextColor={colors.ash}
-            autoCapitalize="words"
-            style={{ fontFamily: fonts.bold, fontSize: 24, lineHeight: 28, color: colors.ink, paddingVertical: space[2] }}
-          />
-          <HairlineRule />
-        </View>
-
-        {/* Primary sport */}
-        <View style={{ marginTop: space[7] }}>
-          <MicroLabel>PRIMARY SPORT</MicroLabel>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2], marginTop: space[4] }}>
+        {/* SPORTS */}
+        <View style={{ marginTop: space[5] }}>
+          <MicroLabel tone="ash">PRIMARY SPORT</MicroLabel>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: space[2], paddingTop: space[3], paddingRight: space[4] }}
+          >
             {SPORTS.map((s) => {
               const active = sport === s;
               return (
                 <Pressable
                   key={s}
-                  onPress={() => { Haptics.selectionAsync(); setSport(s); }}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setSport(s);
+                  }}
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
-                  style={{
+                  style={({ pressed }) => ({
                     paddingVertical: space[2],
                     paddingHorizontal: space[4],
+                    borderRadius: 999,
+                    backgroundColor: active
+                      ? pressed
+                        ? colors.emberPressed
+                        : colors.ember
+                      : pressed
+                        ? colors.fog
+                        : colors.surface,
                     borderWidth: 1,
-                    borderColor: colors.ink,
-                    borderRadius: 8,
-                    backgroundColor: active ? colors.ink : 'transparent',
-                    minHeight: 44,
+                    borderColor: active ? 'transparent' : colors.fog,
+                    minHeight: 36,
                     justifyContent: 'center',
-                  }}
+                  })}
                 >
-                  <Text
-                    allowFontScaling={false}
-                    style={{ fontFamily: fonts.semibold, fontSize: 12, letterSpacing: 0.6, color: active ? colors.paper : colors.ink }}
-                  >
+                  <Txt variant="label" style={{ color: active ? colors.paper : colors.ink }}>
                     {SPORT_LABELS[s]}
-                  </Text>
+                  </Txt>
                 </Pressable>
               );
             })}
-          </View>
+          </ScrollView>
         </View>
 
-        {/* School */}
-        <View style={{ marginTop: space[7] }}>
+        {/* SCHOOL */}
+        <View style={{ marginTop: space[5] }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <MicroLabel>SCHOOL</MicroLabel>
+            <MicroLabel tone="ash">SCHOOL</MicroLabel>
             <Pressable
-              onPress={() => { Haptics.selectionAsync(); setPicking((v) => !v); }}
+              onPress={() => {
+                Haptics.selectionAsync();
+                setPicking((v) => !v);
+              }}
               hitSlop={8}
               accessibilityRole="button"
-              style={{ minHeight: 44, justifyContent: 'center' }}
+              style={{ minHeight: 32, justifyContent: 'center' }}
             >
               <MicroLabel tone="ink">{picking ? 'DONE' : 'CHANGE'}</MicroLabel>
             </Pressable>
           </View>
-          <Txt variant="bodyLg" tone={selectedSchool ? 'ink' : 'ash'} style={{ marginTop: space[1] }}>
-            {selectedSchool ? selectedSchool.name : 'No school set'}
-          </Txt>
-          {selectedSchool && locality(selectedSchool).length > 0 && (
-            <MicroLabel style={{ marginTop: space[1] }}>{locality(selectedSchool)}</MicroLabel>
-          )}
-          <HairlineRule style={{ marginTop: space[3] }} />
+
+          <Card padded style={{ marginTop: space[3] }}>
+            <Txt variant="bodyLg" tone={selectedSchool ? 'ink' : 'ash'} weight={selectedSchool ? 'semibold' : 'medium'}>
+              {selectedSchool ? selectedSchool.name : 'No school set'}
+            </Txt>
+            {selectedSchool && locality(selectedSchool).length > 0 && (
+              <Txt variant="bodySm" tone="ash" style={{ marginTop: space[1] }}>
+                {locality(selectedSchool)}
+              </Txt>
+            )}
+          </Card>
 
           {picking && (
-            <View style={{ marginTop: space[4] }}>
+            <View style={{ marginTop: space[4], gap: space[3] }}>
               {locating ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
-                  <ActivityIndicator color={colors.ink} />
-                  <MicroLabel>FINDING SCHOOLS NEAR YOU…</MicroLabel>
-                </View>
+                <Card padded>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
+                    <ActivityIndicator color={colors.ash} />
+                    <MicroLabel tone="ash">FINDING SCHOOLS NEAR YOU…</MicroLabel>
+                  </View>
+                </Card>
               ) : (
-                <PrimaryButton label="USE MY LOCATION" variant="ghost" onPress={useMyLocation} />
+                <PrimaryButton label="USE MY LOCATION" variant="ghost" onPress={useMyLocation} full />
               )}
 
-              <View style={{ marginTop: space[5] }}>
+              <Card padded>
+                <MicroLabel tone="ash">SEARCH</MicroLabel>
                 <BottomSheetTextInput
                   value={query}
                   onChangeText={setQuery}
                   placeholder="Search schools"
                   placeholderTextColor={colors.ash}
                   autoCorrect={false}
-                  style={{ fontFamily: fonts.bold, fontSize: 20, lineHeight: 26, color: colors.ink, paddingVertical: space[2] }}
+                  style={searchInputStyle}
                 />
-                <HairlineRule />
-              </View>
+              </Card>
 
-              {schoolList.map((s, i) => (
-                <View key={s.id}>
-                  <Pressable
-                    onPress={() => pickSchool(s)}
-                    accessibilityRole="button"
-                    style={{ paddingVertical: space[4], minHeight: 44 }}
-                  >
-                    <Txt variant="bodyLg">{s.name}</Txt>
-                    {locality(s).length > 0 && <MicroLabel style={{ marginTop: space[1] }}>{locality(s)}</MicroLabel>}
-                  </Pressable>
-                  {i < schoolList.length - 1 && <HairlineRule />}
-                </View>
-              ))}
+              {schoolList.length > 0 && (
+                <Card>
+                  {schoolList.map((s, i) => (
+                    <View key={s.id}>
+                      <Pressable
+                        onPress={() => pickSchool(s)}
+                        accessibilityRole="button"
+                        style={({ pressed }) => ({
+                          paddingVertical: space[4],
+                          paddingHorizontal: space[4],
+                          minHeight: 56,
+                          backgroundColor: pressed ? colors.fog : 'transparent',
+                        })}
+                      >
+                        <Txt variant="bodyLg" weight="semibold">{s.name}</Txt>
+                        {locality(s).length > 0 && (
+                          <Txt variant="bodySm" tone="ash" style={{ marginTop: space[1] }}>
+                            {locality(s)}
+                          </Txt>
+                        )}
+                      </Pressable>
+                      {i < schoolList.length - 1 && <HairlineRule />}
+                    </View>
+                  ))}
+                </Card>
+              )}
 
               {query.trim().length >= 2 && results.length === 0 && (
-                <Txt variant="bodySm" tone="ash" weight="semibold" style={{ marginTop: space[3] }}>
+                <Txt variant="bodySm" tone="ash" weight="semibold">
                   No schools found.
                 </Txt>
               )}
@@ -328,19 +474,32 @@ export const ProfileEditSheet = forwardRef<ProfileEditSheetRef, Props>(function 
           )}
         </View>
 
-        <PrimaryButton
-          label={saving ? 'SAVING…' : 'SAVE PROFILE'}
-          full
-          onPress={save}
-          disabled={saving}
-          style={{ marginTop: space[8] }}
-        />
+        {/* GRAD YEAR */}
+        <View style={{ marginTop: space[5] }}>
+          <MicroLabel tone="ash">GRAD YEAR</MicroLabel>
+          <Card padded style={{ marginTop: space[3] }}>
+            <BottomSheetTextInput
+              value={gradYear}
+              onChangeText={(t) => setGradYear(t.replace(/[^0-9]/g, '').slice(0, 4))}
+              placeholder={String(CURRENT_YEAR + 4)}
+              placeholderTextColor={colors.ash}
+              keyboardType="number-pad"
+              style={gradInputStyle}
+            />
+          </Card>
+          {!gradYearValid && (
+            <Txt variant="bodySm" tone="ember" weight="semibold" style={{ marginTop: space[2] }}>
+              That doesn't look like a graduation year.
+            </Txt>
+          )}
+        </View>
 
         {error && (
           <Txt
             variant="bodySm"
-            tone="ink"
-            style={{ marginTop: space[3], textAlign: 'center' }}
+            tone="ember"
+            weight="semibold"
+            style={{ marginTop: space[5], textAlign: 'center' }}
             accessibilityLiveRegion="polite"
           >
             {error}

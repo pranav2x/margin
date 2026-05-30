@@ -5,13 +5,15 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { Txt } from '../../components/primitives/Text';
 import { MicroLabel } from '../../components/primitives/MicroLabel';
-import { HairlineRule } from '../../components/primitives/HairlineRule';
+import { Card } from '../../components/primitives/Card';
 import { PrimaryButton } from '../../components/primitives/PrimaryButton';
-import { useTheme, space, SCREEN_PADDING, fonts } from '../../theme';
+import { AppIcon } from '../../components/primitives/AppIcon';
+import { useTheme, space, SCREEN_PADDING, type } from '../../theme';
 import { supabase } from '../../lib/supabase';
 import { signOut } from '../../lib/auth';
 
 const MIN_AGE = 13;
+const YEAR_LEN = 4;
 
 // Year-only gate: age is approximated as currentYear - birthYear (ignores
 // birthday month, which is standard for a year-based check). Bands:
@@ -33,17 +35,18 @@ export default function AgeGate() {
   const [blocked, setBlocked] = useState(false);
 
   const currentYear = new Date().getFullYear();
+  const ready = year.length === YEAR_LEN;
 
   const onChange = (text: string) => {
     setError(null);
-    setYear(text.replace(/[^0-9]/g, '').slice(0, 4));
+    setYear(text.replace(/[^0-9]/g, '').slice(0, YEAR_LEN));
   };
 
   const submit = async () => {
     setError(null);
     const parsed = Number(year);
 
-    if (year.length !== 4 || Number.isNaN(parsed) || parsed < 1900 || parsed > currentYear) {
+    if (year.length !== YEAR_LEN || Number.isNaN(parsed) || parsed < 1900 || parsed > currentYear) {
       setError('Enter the four-digit year you were born.');
       return;
     }
@@ -94,6 +97,9 @@ export default function AgeGate() {
   };
 
   if (blocked) {
+    // Under-13 dead-end. The single ember moment lives in the Card border
+    // tint — a sanctioned exception to the orange-restraint rule since the
+    // ember stands in for the rejection signal.
     return (
       <View
         style={{
@@ -105,18 +111,44 @@ export default function AgeGate() {
           justifyContent: 'center',
         }}
       >
-        <MicroLabel>AGE REQUIREMENT</MicroLabel>
-        <Txt variant="display2" style={{ marginTop: space[4] }}>
-          Elevate is for ages{' '}
-          <Txt variant="display2" weight="extrabold" tone="ember">
-            13 and up.
+        <Card
+          padded
+          style={{
+            borderColor: colors.ember,
+            alignItems: 'center',
+          }}
+        >
+          <AppIcon name="Snowflake" size={28} tone="ember" />
+          <MicroLabel
+            tone="ink"
+            style={{ marginTop: space[4], textAlign: 'center' }}
+          >
+            AGE REQUIREMENT
+          </MicroLabel>
+          <Txt
+            variant="display4"
+            weight="bold"
+            style={{ marginTop: space[3], textAlign: 'center' }}
+          >
+            Elevate is for ages 13 and up.
           </Txt>
-        </Txt>
-        <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[6], lineHeight: 26 }}>
-          Thanks for stopping by. Come back when you're a little older — we'll keep your spot on the board.
-        </Txt>
+          <Txt
+            variant="body"
+            tone="ash"
+            style={{ marginTop: space[4], textAlign: 'center' }}
+          >
+            Thanks for stopping by. Come back when you&apos;re a little older — we&apos;ll keep your spot on the board.
+          </Txt>
+        </Card>
 
-        <View style={{ position: 'absolute', left: SCREEN_PADDING, right: SCREEN_PADDING, bottom: insets.bottom + space[5] }}>
+        <View
+          style={{
+            position: 'absolute',
+            left: SCREEN_PADDING,
+            right: SCREEN_PADDING,
+            bottom: insets.bottom + space[5],
+          }}
+        >
           <PrimaryButton label="OK" full onPress={() => signOut()} />
         </View>
       </View>
@@ -129,54 +161,61 @@ export default function AgeGate() {
         flex: 1,
         backgroundColor: colors.paper,
         paddingHorizontal: SCREEN_PADDING,
-        paddingTop: insets.top + space[7],
+        paddingTop: insets.top + space[8],
       }}
     >
       <MicroLabel>ONE QUICK THING</MicroLabel>
-      <Txt variant="display2" style={{ marginTop: space[4] }}>
-        What year were you{' '}
-        <Txt variant="display2" weight="extrabold" tone="ember">
-          born?
-        </Txt>
+      <Txt variant="display4" weight="bold" style={{ marginTop: space[3] }}>
+        When were you born?
       </Txt>
-      <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[4], lineHeight: 26 }}>
+      <Txt variant="body" tone="ash" style={{ marginTop: space[3] }}>
         Elevate is built for athletes ages 13 and up.
       </Txt>
 
-      <View style={{ marginTop: space[8] }}>
+      {/* Big centered tabular YYYY input. */}
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <TextInput
           value={year}
           onChangeText={onChange}
           placeholder="YYYY"
-          placeholderTextColor={colors.ash}
+          placeholderTextColor={colors.fog}
           keyboardType="number-pad"
-          maxLength={4}
+          maxLength={YEAR_LEN}
           autoFocus
           allowFontScaling={false}
-          style={{
-            fontFamily: fonts.extrabold,
-            fontVariant: ['tabular-nums'],
-            fontSize: 56,
-            lineHeight: 60,
-            letterSpacing: 4,
-            color: colors.ink,
-            paddingVertical: space[2],
-          }}
+          style={[
+            type.scoreXl,
+            {
+              textAlign: 'center',
+              color: colors.ink,
+              letterSpacing: 4,
+              minWidth: 220,
+              paddingVertical: space[3],
+            },
+          ]}
         />
-        <HairlineRule />
         {error && (
-          <Txt variant="bodySm" tone="ash" style={{ marginTop: space[3] }}>
+          <Txt
+            variant="bodySm"
+            tone="ash"
+            style={{ marginTop: space[3], textAlign: 'center' }}
+            accessibilityLiveRegion="polite"
+          >
             {error}
           </Txt>
         )}
       </View>
 
-      <View style={{ position: 'absolute', left: SCREEN_PADDING, right: SCREEN_PADDING, bottom: insets.bottom + space[5] }}>
+      <View
+        style={{
+          paddingBottom: insets.bottom + space[5],
+        }}
+      >
         <PrimaryButton
           label={submitting ? 'CHECKING...' : 'CONTINUE'}
           full
           onPress={submit}
-          disabled={submitting}
+          disabled={submitting || !ready}
         />
       </View>
     </View>

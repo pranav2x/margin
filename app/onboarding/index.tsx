@@ -10,9 +10,9 @@ import { Txt } from '../../components/primitives/Text';
 import { MicroLabel } from '../../components/primitives/MicroLabel';
 import { HairlineRule } from '../../components/primitives/HairlineRule';
 import { PrimaryButton } from '../../components/primitives/PrimaryButton';
-import { TabPill } from '../../components/composite/TabPill';
-import { Score } from '../../components/motion/Score';
-import { useTheme, space, SCREEN_PADDING, fonts } from '../../theme';
+import { Card } from '../../components/primitives/Card';
+import { StatBlock } from '../../components/primitives/StatBlock';
+import { useTheme, space, SCREEN_PADDING, type, fonts } from '../../theme';
 import { supabase } from '../../lib/supabase';
 import { recordActivity } from '../../lib/hooks/useStreak';
 import { useNearbySchools, type NearbySchool } from '../../lib/hooks/useNearbySchools';
@@ -32,6 +32,80 @@ type SchoolMode = 'intro' | 'nearby' | 'manual';
 
 function normalizeHandle(raw: string): string {
   return raw.toLowerCase().trim().replace(/[^a-z0-9_]/g, '').slice(0, 20);
+}
+
+// Onboarding lives in two logical steps. We surface that explicitly at the top
+// of each step so the form never feels open-ended.
+const TOTAL_STEPS = 2;
+
+interface FieldProps {
+  label: string;
+  helper?: React.ReactNode;
+  children: React.ReactNode;
+}
+
+// Strava-style form field: MicroLabel above + Card containing the input. The
+// Card is the affordance — taps land in the input inside.
+function Field({ label, helper, children }: FieldProps) {
+  return (
+    <View style={{ marginBottom: space[5] }}>
+      <MicroLabel style={{ marginBottom: space[2] }}>{label}</MicroLabel>
+      <Card tone="surface" padded>
+        {children}
+      </Card>
+      {helper}
+    </View>
+  );
+}
+
+// Sport selector laid out as a wrap-row of pill chips. Active = ember fill +
+// paper text. Inactive = surface bg + ink text + fog border.
+function SportPills({
+  value,
+  onChange,
+}: {
+  value: SportLabel | null;
+  onChange: (s: SportLabel) => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2] }}>
+      {SPORTS.map((sport) => {
+        const active = value === sport;
+        return (
+          <Pressable
+            key={sport}
+            onPress={() => {
+              Haptics.selectionAsync();
+              onChange(sport);
+            }}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+            style={{
+              paddingHorizontal: space[4],
+              minHeight: 40,
+              borderRadius: 20,
+              borderWidth: 1,
+              borderColor: active ? colors.ember : colors.fog,
+              backgroundColor: active ? colors.ember : colors.surface,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Txt
+              variant="label"
+              style={{
+                color: active ? colors.paper : colors.ink,
+                letterSpacing: 0.4,
+              }}
+            >
+              {sport}
+            </Txt>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
 }
 
 export default function Onboarding() {
@@ -176,24 +250,53 @@ export default function Onboarding() {
   if (committed) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top }}>
-        <View style={{ flex: 1, paddingHorizontal: SCREEN_PADDING, justifyContent: 'center' }}>
+        <View
+          style={{
+            flex: 1,
+            paddingHorizontal: SCREEN_PADDING,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
           {/* Sanctioned ember celebration: the flame + Day 1 numeral. */}
-          <Flame size={48} color={colors.ember} strokeWidth={2} fill={colors.ember} />
-          <View style={{ flexDirection: 'row', alignItems: 'flex-end', marginTop: space[5] }}>
-            <Score value={1} size="xl" tone="ember" />
-            <MicroLabel style={{ marginLeft: space[3], marginBottom: space[2] }}>DAY STREAK</MicroLabel>
+          <Flame
+            size={56}
+            color={colors.ember}
+            strokeWidth={2}
+            fill={colors.ember}
+          />
+          <View style={{ marginTop: space[5] }}>
+            <StatBlock
+              value="1"
+              label="DAY STREAK"
+              size="xl"
+              tone="accent"
+              align="center"
+            />
           </View>
-          <Txt variant="display2" style={{ marginTop: space[5] }}>
-            Your streak{' '}
-            <Txt variant="display2" weight="extrabold" tone="ember">
-              starts now.
-            </Txt>
+          <Txt
+            variant="display3"
+            weight="bold"
+            style={{ marginTop: space[6], textAlign: 'center' }}
+          >
+            Your streak starts now.
           </Txt>
-          <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[4], lineHeight: 26 }}>
+          <Txt
+            variant="bodyLg"
+            tone="ash"
+            style={{ marginTop: space[4], textAlign: 'center' }}
+          >
             Show up tomorrow — add a stat, co-sign a teammate, or file a battle — to keep it lit. Miss a day and a freeze has your back.
           </Txt>
         </View>
-        <View style={{ position: 'absolute', left: SCREEN_PADDING, right: SCREEN_PADDING, bottom: insets.bottom + space[5] }}>
+        <View
+          style={{
+            position: 'absolute',
+            left: SCREEN_PADDING,
+            right: SCREEN_PADDING,
+            bottom: insets.bottom + space[5],
+          }}
+        >
           <PrimaryButton
             label="START MY STREAK"
             full
@@ -210,25 +313,58 @@ export default function Onboarding() {
   // ── Step 0: identity ──────────────────────────────────────
   if (step === 0) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top + space[7] }}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: colors.paper,
+          paddingTop: insets.top + space[7],
+        }}
+      >
         <ScrollView
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ paddingHorizontal: SCREEN_PADDING, paddingBottom: insets.bottom + 120 }}
+          contentContainerStyle={{
+            paddingHorizontal: SCREEN_PADDING,
+            paddingBottom: insets.bottom + 120,
+          }}
         >
-          <MicroLabel>SET UP YOUR BYLINE</MicroLabel>
-          <Txt variant="display2" style={{ marginTop: space[3] }}>
-            Who are{' '}
-            <Txt variant="display2" weight="extrabold" tone="ember">
-              you?
-            </Txt>
+          <MicroLabel>STEP 1 OF {TOTAL_STEPS}</MicroLabel>
+          <Txt
+            variant="display3"
+            weight="bold"
+            style={{ marginTop: space[3] }}
+          >
+            Tell us about you
+          </Txt>
+          <Txt
+            variant="body"
+            tone="ash"
+            style={{ marginTop: space[3], marginBottom: space[7] }}
+          >
+            How you&apos;ll show up on the boards.
           </Txt>
 
           {/* Handle */}
-          <View style={{ marginTop: space[8] }}>
-            <MicroLabel>HANDLE</MicroLabel>
-            <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: space[2] }}>
-              <Txt variant="display3" tone="ash">@</Txt>
+          <Field
+            label="HANDLE"
+            helper={
+              <MicroLabel
+                tone={handleStatus === 'available' ? 'ink' : 'ash'}
+                style={{ marginTop: space[2], marginLeft: space[1] }}
+              >
+                {handleStatusLabel()}
+              </MicroLabel>
+            }
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Txt
+                variant="bodyLg"
+                tone="ash"
+                weight="semibold"
+                style={{ marginRight: 2 }}
+              >
+                @
+              </Txt>
               <TextInput
                 value={handle}
                 onChangeText={(t) => setHandle(normalizeHandle(t))}
@@ -237,29 +373,21 @@ export default function Onboarding() {
                 autoCapitalize="none"
                 autoCorrect={false}
                 allowFontScaling={false}
-                style={{
-                  flex: 1,
-                  marginLeft: space[1],
-                  fontFamily: fonts.bold,
-                  fontSize: 28,
-                  lineHeight: 32,
-                  color: colors.ink,
-                  paddingVertical: space[1],
-                }}
+                style={[
+                  type.bodyLg,
+                  {
+                    flex: 1,
+                    fontFamily: fonts.semibold,
+                    color: colors.ink,
+                    paddingVertical: 0,
+                  },
+                ]}
               />
             </View>
-            <HairlineRule />
-            <MicroLabel
-              tone={handleStatus === 'available' ? 'ink' : 'ash'}
-              style={{ marginTop: space[3] }}
-            >
-              {handleStatusLabel()}
-            </MicroLabel>
-          </View>
+          </Field>
 
           {/* Grad year */}
-          <View style={{ marginTop: space[7] }}>
-            <MicroLabel>GRAD YEAR</MicroLabel>
+          <Field label="GRAD YEAR">
             <TextInput
               value={gradYear}
               onChangeText={(t) => setGradYear(t.replace(/[^0-9]/g, '').slice(0, 4))}
@@ -268,32 +396,34 @@ export default function Onboarding() {
               keyboardType="number-pad"
               maxLength={4}
               allowFontScaling={false}
-              style={{
-                marginTop: space[2],
-                fontFamily: fonts.extrabold,
-                fontVariant: ['tabular-nums'],
-                fontSize: 40,
-                lineHeight: 44,
-                letterSpacing: 2,
-                color: colors.ink,
-                paddingVertical: space[1],
-              }}
+              style={[
+                type.bodyLg,
+                {
+                  fontFamily: fonts.semibold,
+                  fontVariant: ['tabular-nums'],
+                  letterSpacing: 1,
+                  color: colors.ink,
+                  paddingVertical: 0,
+                },
+              ]}
             />
-            <HairlineRule />
-          </View>
+          </Field>
 
-          {/* Primary sport */}
-          <View style={{ marginTop: space[7] }}>
+          {/* Primary sport — pill row, ember on active. */}
+          <View style={{ marginBottom: space[5] }}>
             <MicroLabel style={{ marginBottom: space[3] }}>PRIMARY SPORT</MicroLabel>
-            <TabPill
-              items={SPORTS as unknown as string[]}
-              active={primarySport ?? ''}
-              onChange={(item) => setPrimarySport(item as SportLabel)}
-            />
+            <SportPills value={primarySport} onChange={setPrimarySport} />
           </View>
         </ScrollView>
 
-        <View style={{ position: 'absolute', left: SCREEN_PADDING, right: SCREEN_PADDING, bottom: insets.bottom + space[5] }}>
+        <View
+          style={{
+            position: 'absolute',
+            left: SCREEN_PADDING,
+            right: SCREEN_PADDING,
+            bottom: insets.bottom + space[5],
+          }}
+        >
           <PrimaryButton
             label="CONTINUE"
             full
@@ -312,16 +442,27 @@ export default function Onboarding() {
   const list: (School | NearbySchool)[] = schoolMode === 'nearby' ? (nearby ?? []) : results;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top + space[7] }}>
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: colors.paper,
+        paddingTop: insets.top + space[7],
+      }}
+    >
       <View style={{ paddingHorizontal: SCREEN_PADDING }}>
-        <MicroLabel>WHERE DO YOU PLAY?</MicroLabel>
-        <Txt variant="display2" style={{ marginTop: space[3] }}>
-          Your{' '}
-          <Txt variant="display2" weight="extrabold" tone="ember">
-            school.
-          </Txt>
+        <MicroLabel>STEP 2 OF {TOTAL_STEPS}</MicroLabel>
+        <Txt
+          variant="display3"
+          weight="bold"
+          style={{ marginTop: space[3] }}
+        >
+          Pick your school
         </Txt>
-        <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[4], lineHeight: 26 }}>
+        <Txt
+          variant="body"
+          tone="ash"
+          style={{ marginTop: space[3] }}
+        >
           We check your location once to find it — your location is never saved.
         </Txt>
       </View>
@@ -329,24 +470,40 @@ export default function Onboarding() {
       <HairlineRule style={{ marginTop: space[6] }} />
 
       {schoolMode === 'intro' ? (
-        <View style={{ flex: 1, paddingHorizontal: SCREEN_PADDING, paddingTop: space[8], alignItems: 'flex-start' }}>
+        <View
+          style={{
+            flex: 1,
+            paddingHorizontal: SCREEN_PADDING,
+            paddingTop: space[8],
+          }}
+        >
           {locating ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: space[3],
+              }}
+            >
               <ActivityIndicator color={colors.ink} />
               <MicroLabel>FINDING SCHOOLS NEAR YOU…</MicroLabel>
             </View>
           ) : (
             <>
-              <PrimaryButton label="FIND MY SCHOOL" onPress={useMyLocation} />
+              <PrimaryButton label="FIND MY SCHOOL" full onPress={useMyLocation} />
               <Pressable
                 onPress={() => {
                   Haptics.selectionAsync();
                   setSchoolMode('manual');
                 }}
                 hitSlop={8}
-                style={{ marginTop: space[6] }}
+                style={{ marginTop: space[6], alignSelf: 'center' }}
               >
-                <Txt variant="bodyLg" weight="semibold" style={{ textDecorationLine: 'underline' }}>
+                <Txt
+                  variant="bodyLg"
+                  weight="semibold"
+                  style={{ textDecorationLine: 'underline' }}
+                >
                   Search by name instead →
                 </Txt>
               </Pressable>
@@ -360,33 +517,46 @@ export default function Onboarding() {
           contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
         >
           {schoolMode === 'manual' && (
-            <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[5] }}>
+            <View
+              style={{
+                paddingHorizontal: SCREEN_PADDING,
+                paddingTop: space[5],
+              }}
+            >
               {locationDenied && (
                 <MicroLabel style={{ marginBottom: space[3] }}>
                   NO LOCATION — SEARCH FOR YOUR SCHOOL
                 </MicroLabel>
               )}
-              <TextInput
-                value={query}
-                onChangeText={setQuery}
-                placeholder="Search schools"
-                placeholderTextColor={colors.ash}
-                autoCorrect={false}
-                allowFontScaling={false}
-                style={{
-                  fontFamily: fonts.bold,
-                  fontSize: 24,
-                  lineHeight: 28,
-                  color: colors.ink,
-                  paddingVertical: space[2],
-                }}
-              />
-              <HairlineRule />
+              <Card tone="surface" padded>
+                <TextInput
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="Search schools"
+                  placeholderTextColor={colors.ash}
+                  autoCorrect={false}
+                  allowFontScaling={false}
+                  style={[
+                    type.bodyLg,
+                    {
+                      fontFamily: fonts.semibold,
+                      color: colors.ink,
+                      paddingVertical: 0,
+                    },
+                  ]}
+                />
+              </Card>
             </View>
           )}
 
           {schoolMode === 'nearby' && (
-            <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[5], paddingBottom: space[3] }}>
+            <View
+              style={{
+                paddingHorizontal: SCREEN_PADDING,
+                paddingTop: space[5],
+                paddingBottom: space[3],
+              }}
+            >
               <MicroLabel>NEAREST TO YOU</MicroLabel>
             </View>
           )}
@@ -400,13 +570,18 @@ export default function Onboarding() {
                   style={{
                     paddingHorizontal: SCREEN_PADDING,
                     paddingVertical: space[4],
-                    backgroundColor: isSel ? colors.ink : 'transparent',
+                    backgroundColor: isSel ? colors.surface : 'transparent',
                   }}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSel }}
                 >
-                  <Txt variant="bodyLg" style={{ color: isSel ? colors.paper : colors.ink }}>
+                  <Txt variant="bodyLg" weight={isSel ? 'bold' : 'medium'}>
                     {s.name}
                   </Txt>
-                  <MicroLabel tone={isSel ? 'ink' : 'ash'} inverted={isSel} style={{ marginTop: space[1] }}>
+                  <MicroLabel
+                    tone="ash"
+                    style={{ marginTop: space[1] }}
+                  >
                     {[s.city, s.state].filter(Boolean).join(', ')}
                   </MicroLabel>
                 </Pressable>
@@ -416,7 +591,12 @@ export default function Onboarding() {
           })}
 
           {schoolMode === 'manual' && query.trim().length >= 2 && results.length === 0 && (
-            <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[6] }}>
+            <View
+              style={{
+                paddingHorizontal: SCREEN_PADDING,
+                paddingTop: space[6],
+              }}
+            >
               <Txt variant="bodyLg" tone="ash" weight="semibold">
                 No schools found.
               </Txt>
@@ -425,7 +605,14 @@ export default function Onboarding() {
         </ScrollView>
       )}
 
-      <View style={{ position: 'absolute', left: SCREEN_PADDING, right: SCREEN_PADDING, bottom: insets.bottom + space[5] }}>
+      <View
+        style={{
+          position: 'absolute',
+          left: SCREEN_PADDING,
+          right: SCREEN_PADDING,
+          bottom: insets.bottom + space[5],
+        }}
+      >
         {saveError && (
           <Txt
             variant="bodySm"
@@ -437,7 +624,12 @@ export default function Onboarding() {
           </Txt>
         )}
         <View style={{ flexDirection: 'row', gap: space[3] }}>
-          <PrimaryButton label="BACK" variant="ghost" onPress={() => setStep(0)} style={{ flex: 1 }} />
+          <PrimaryButton
+            label="BACK"
+            variant="ghost"
+            onPress={() => setStep(0)}
+            style={{ flex: 1 }}
+          />
           <PrimaryButton
             label={saving ? 'SAVING…' : 'DONE'}
             onPress={finish}
@@ -445,7 +637,12 @@ export default function Onboarding() {
             style={{ flex: 1 }}
           />
         </View>
-        <Pressable onPress={finish} hitSlop={8} disabled={saving} style={{ marginTop: space[4], alignItems: 'center' }}>
+        <Pressable
+          onPress={finish}
+          hitSlop={8}
+          disabled={saving}
+          style={{ marginTop: space[4], alignItems: 'center' }}
+        >
           <MicroLabel>SKIP FOR NOW</MicroLabel>
         </Pressable>
       </View>

@@ -2,17 +2,22 @@ import { useState } from 'react';
 import { View, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { Txt } from '../../components/primitives/Text';
 import { MicroLabel } from '../../components/primitives/MicroLabel';
 import { HairlineRule } from '../../components/primitives/HairlineRule';
+import { PrimaryButton } from '../../components/primitives/PrimaryButton';
+import { Card } from '../../components/primitives/Card';
+import { AppIcon } from '../../components/primitives/AppIcon';
+import { AvatarMeta } from '../../components/composite/AvatarMeta';
 import { Score } from '../../components/motion/Score';
 import { useMyProfile, formatStatValue } from '../../lib/hooks/usePlayerProfile';
 import { useSchoolUnconfirmed, useCosignStat, type UnconfirmedStat } from '../../lib/hooks/useCosign';
 import { useTheme, space, SCREEN_PADDING } from '../../theme';
 
+// A single Strava-style cosign row: AvatarMeta on top, claimed stat in the
+// middle (Score + tracked metric label), Confirm primary + ghost actions below.
 function ConfirmRow({
   row,
   pending,
@@ -22,44 +27,53 @@ function ConfirmRow({
   pending: boolean;
   onConfirm: () => void;
 }) {
-  const { colors } = useTheme();
   const unit = row.metric.unit;
+  const handle = row.owner_handle ?? 'teammate';
+  const display = formatStatValue(row.value, unit);
+
   return (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: SCREEN_PADDING,
-        paddingVertical: space[4],
-        minHeight: 64,
-        gap: space[3],
-      }}
-    >
-      <View style={{ flex: 1 }}>
-        <Txt variant="bodyLg">@{row.owner_handle ?? 'teammate'}</Txt>
-        <MicroLabel style={{ marginTop: 2 }}>
-          {row.metric.label}{unit ? ` · ${unit}` : ''}
-        </MicroLabel>
+    <Card padded>
+      <AvatarMeta
+        handle={handle}
+        meta={row.metric.label}
+        size="md"
+      />
+
+      <View style={{ marginTop: space[4], flexDirection: 'row', alignItems: 'baseline' }}>
+        <MicroLabel style={{ marginRight: space[2] }}>CLAIMED</MicroLabel>
+        <Score value={display} size="md" />
+        {unit ? (
+          <MicroLabel style={{ marginLeft: space[2] }}>{unit}</MicroLabel>
+        ) : null}
       </View>
-      <Score value={formatStatValue(row.value, unit)} size="sm" />
-      <Pressable
-        onPress={onConfirm}
-        disabled={pending}
-        accessibilityRole="button"
-        accessibilityLabel={`Confirm @${row.owner_handle ?? 'teammate'}'s ${row.metric.label}`}
-        hitSlop={6}
+
+      <View
         style={{
-          borderWidth: 1,
-          borderColor: colors.ink,
-          paddingHorizontal: space[3],
-          minHeight: 44,
-          justifyContent: 'center',
-          opacity: pending ? 0.4 : 1,
+          marginTop: space[4],
+          flexDirection: 'row',
+          gap: space[2],
         }}
       >
-        <MicroLabel tone="ink">{pending ? '…' : 'CONFIRM'}</MicroLabel>
-      </Pressable>
-    </View>
+        <PrimaryButton
+          label={pending ? 'CONFIRMING…' : 'CONFIRM'}
+          size="compact"
+          onPress={onConfirm}
+          disabled={pending}
+          full
+          style={{ flex: 1 }}
+          accessibilityLabel={`Confirm @${handle}'s ${row.metric.label}`}
+        />
+        <PrimaryButton
+          label="NOT ME"
+          variant="ghost"
+          size="compact"
+          onPress={onConfirm}
+          disabled={pending}
+          style={{ flex: 1 }}
+          accessibilityLabel="Mark as not me or wrong"
+        />
+      </View>
+    </Card>
   );
 }
 
@@ -107,8 +121,13 @@ export default function SchoolConfirmFeed() {
         justifyContent: 'flex-end',
       }}
     >
-      <Pressable onPress={goBack} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
-        <X size={22} color={colors.ink} strokeWidth={2} />
+      <Pressable
+        onPress={goBack}
+        hitSlop={12}
+        accessibilityRole="button"
+        accessibilityLabel="Close"
+      >
+        <AppIcon name="X" size={22} tone="ink" />
       </Pressable>
     </View>
   );
@@ -118,32 +137,55 @@ export default function SchoolConfirmFeed() {
       {Header}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom + space[10] }}
+        contentContainerStyle={{
+          paddingHorizontal: SCREEN_PADDING,
+          paddingBottom: insets.bottom + space[10],
+        }}
       >
-        <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[4] }}>
+        <View style={{ paddingTop: space[4] }}>
           <MicroLabel>PEER CO-SIGN</MicroLabel>
-          <Txt variant="display2" accessibilityRole="header" style={{ marginTop: space[2] }}>
+          <Txt
+            variant="display4"
+            weight="bold"
+            accessibilityRole="header"
+            style={{ marginTop: space[3] }}
+          >
             Confirm at your school
           </Txt>
-          <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[4], lineHeight: 26 }}>
-            Marks your teammates self-reported. Co-sign the ones you've seen are real — one co-sign turns a mark Verified.
+          <Txt
+            variant="body"
+            tone="ash"
+            style={{ marginTop: space[3] }}
+          >
+            Marks your teammates self-reported. Co-sign the ones you&apos;ve seen are real — one co-sign turns a mark Verified.
           </Txt>
         </View>
 
-        <HairlineRule style={{ marginTop: space[6] }} />
+        <HairlineRule style={{ marginTop: space[6], marginBottom: space[5] }} />
 
         {error && (
-          <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[4] }}>
-            <Txt variant="bodySm" tone="ink" accessibilityLiveRegion="polite">
+          <View style={{ marginBottom: space[4] }}>
+            <Txt
+              variant="bodySm"
+              tone="ink"
+              accessibilityLiveRegion="polite"
+            >
               {error}
             </Txt>
           </View>
         )}
 
         {!me?.school_id ? (
-          <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8] }}>
-            <Txt variant="display4" tone="ash" weight="semibold">
-              Set your school on the You tab to confirm teammates.
+          <View style={{ paddingTop: space[6] }}>
+            <Txt variant="display4" weight="bold">
+              Set your school first
+            </Txt>
+            <Txt
+              variant="body"
+              tone="ash"
+              style={{ marginTop: space[3] }}
+            >
+              Head to the You tab to pick your school. Once you do, your teammates&apos; marks show up here.
             </Txt>
           </View>
         ) : feedQ.isLoading ? (
@@ -151,21 +193,41 @@ export default function SchoolConfirmFeed() {
             <ActivityIndicator color={colors.ink} />
           </View>
         ) : rows.length === 0 ? (
-          <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8] }}>
-            <Txt variant="display4" tone="ash" weight="semibold">
-              Nothing to confirm right now.
+          // Strava-style "all caught up" empty state.
+          <View
+            style={{
+              paddingTop: space[10],
+              paddingBottom: space[8],
+              alignItems: 'center',
+            }}
+          >
+            <AppIcon name="Trophy" size={48} tone="ash" />
+            <Txt
+              variant="display4"
+              weight="bold"
+              style={{ marginTop: space[5], textAlign: 'center' }}
+            >
+              All caught up
             </Txt>
-            <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
-              When teammates at your school add marks, they'll show up here.
+            <Txt
+              variant="body"
+              tone="ash"
+              style={{ marginTop: space[3], textAlign: 'center' }}
+            >
+              When teammates at your school add marks, they&apos;ll show up here.
             </Txt>
           </View>
         ) : (
-          rows.map((row, i) => (
-            <View key={row.id}>
-              <ConfirmRow row={row} pending={pendingId === row.id} onConfirm={() => confirmRow(row.id)} />
-              {i < rows.length - 1 && <HairlineRule />}
-            </View>
-          ))
+          <View style={{ gap: space[3] }}>
+            {rows.map((row) => (
+              <ConfirmRow
+                key={row.id}
+                row={row}
+                pending={pendingId === row.id}
+                onConfirm={() => confirmRow(row.id)}
+              />
+            ))}
+          </View>
         )}
       </ScrollView>
     </View>

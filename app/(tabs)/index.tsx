@@ -9,8 +9,11 @@ import * as Haptics from 'expo-haptics';
 import { Txt } from '../../components/primitives/Text';
 import { MicroLabel } from '../../components/primitives/MicroLabel';
 import { HairlineRule } from '../../components/primitives/HairlineRule';
+import { AppIcon } from '../../components/primitives/AppIcon';
+import { Card } from '../../components/primitives/Card';
 import { Score } from '../../components/motion/Score';
 import { TabPill } from '../../components/composite/TabPill';
+import { AvatarMeta } from '../../components/composite/AvatarMeta';
 import { VerifiedMark } from '../../components/composite/StatLine';
 import { supabase } from '../../lib/supabase';
 import { PrimaryButton } from '../../components/primitives/PrimaryButton';
@@ -42,29 +45,54 @@ const SCOPES = [
 ] as const;
 type Scope = (typeof SCOPES)[number]['key'];
 
-function LeaderboardRow({ row, unit, onPress }: { row: LbRow; unit: string | null; onPress: () => void }) {
+function LeaderboardRow({
+  row,
+  unit,
+  onPress,
+}: {
+  row: LbRow;
+  unit: string | null;
+  onPress: () => void;
+}) {
+  const { colors } = useTheme();
+  // Strava-style top-rank highlight: only the #1 row gets the ember accent on
+  // the value (one accent per screen at any given moment).
+  const accent = row.rank === 1;
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`Rank ${row.rank}, @${row.handle}, ${formatStatValue(row.value, unit)} ${unit ?? ''}, ${row.verified ? 'verified' : 'unverified'}`}
-      style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: SCREEN_PADDING, paddingVertical: space[4], minHeight: 56 }}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: SCREEN_PADDING,
+        minHeight: 64,
+        backgroundColor: pressed ? colors.surface : colors.paper,
+      })}
     >
       {/* Rank — fixed width so value/length never shifts the row. */}
-      <View style={{ width: 40, alignItems: 'flex-start' }}>
-        <Score value={`${row.rank}`} size="sm" />
+      <View style={{ width: 36, alignItems: 'flex-start' }}>
+        <Score value={`${row.rank}`} size="md" tone={accent ? 'ember' : 'ink'} />
       </View>
 
       <View style={{ flex: 1, paddingHorizontal: space[3] }}>
-        <Txt variant="bodyLg">@{row.handle}</Txt>
-        {row.school_name ? <MicroLabel style={{ marginTop: 2 }}>{row.school_name}</MicroLabel> : null}
+        <AvatarMeta
+          handle={row.handle}
+          meta={row.school_name ?? undefined}
+          size="sm"
+        />
       </View>
 
       {/* Value + the monochrome verified/unverified badge — the mark is the
           differentiator now that unverified marks also rank. */}
-      <View style={{ alignItems: 'flex-end', minWidth: 76 }}>
-        <Score value={formatStatValue(row.value, unit)} size="sm" />
-        <View style={{ marginTop: space[2] }}>
+      <View style={{ alignItems: 'flex-end', minWidth: 84 }}>
+        <Score
+          value={formatStatValue(row.value, unit)}
+          size="md"
+          tone={accent ? 'ember' : 'ink'}
+        />
+        <View style={{ marginTop: space[1] }}>
           <VerifiedMark verified={row.verified} />
         </View>
       </View>
@@ -134,25 +162,32 @@ export default function BoardsScreen() {
   const pct = pctQ.data;
 
   const header = (
-    <View style={{ paddingTop: space[6] }}>
-      <View style={{ paddingHorizontal: SCREEN_PADDING }}>
+    <View style={{ paddingTop: space[5] }}>
+      {/* Masthead — minimal Strava ranked-segment title. */}
+      <View style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space[5] }}>
         <MicroLabel>LEADERBOARDS</MicroLabel>
-        <Txt variant="display1" accessibilityRole="header" style={{ marginTop: space[2] }}>
+        <Txt variant="display3" weight="extrabold" accessibilityRole="header" style={{ marginTop: space[2] }}>
           Boards
         </Txt>
+        {currentMetric ? (
+          <Txt variant="bodySm" tone="ash" style={{ marginTop: space[1] }}>
+            {SPORT_LABELS[sport]} · {currentMetric.label}
+            {currentMetric.unit ? ` (${currentMetric.unit})` : ''}
+          </Txt>
+        ) : null}
       </View>
 
-      <View style={{ marginTop: space[6] }}>
-        <TabPill
-          items={SPORTS.map((s) => SPORT_LABELS[s])}
-          active={SPORT_LABELS[sport]}
-          onChange={(label) => {
-            const next = SPORTS.find((s) => SPORT_LABELS[s] === label);
-            if (next) setSport(next);
-          }}
-        />
-      </View>
+      {/* Sport pills — primary filter. */}
+      <TabPill
+        items={SPORTS.map((s) => SPORT_LABELS[s])}
+        active={SPORT_LABELS[sport]}
+        onChange={(label) => {
+          const next = SPORTS.find((s) => SPORT_LABELS[s] === label);
+          if (next) setSport(next);
+        }}
+      />
 
+      {/* Scope pills — Global / School / Nearby. */}
       <View style={{ marginTop: space[1] }}>
         <TabPill
           items={SCOPES.map((s) => s.label)}
@@ -166,6 +201,7 @@ export default function BoardsScreen() {
 
       <HairlineRule style={{ marginTop: space[3] }} />
 
+      {/* Metric chips — narrowed to the current sport. */}
       {metricsForSport.length > 0 && (
         <View style={{ marginTop: space[3] }}>
           <TabPill
@@ -179,7 +215,9 @@ export default function BoardsScreen() {
         </View>
       )}
 
-      {/* Percentile (positive phrasing only) + show-unverified toggle */}
+      {/* "You are here" capsule + verified toggle.
+          The capsule is the only ember accent in the header; the toggle stays
+          neutral so the percentile pulls the eye. */}
       <View
         style={{
           paddingHorizontal: SCREEN_PADDING,
@@ -187,15 +225,27 @@ export default function BoardsScreen() {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
+          gap: space[3],
           minHeight: 44,
         }}
       >
         {pct != null ? (
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: space[2] }}>
-            <MicroLabel>TOP</MicroLabel>
-            <Score value={`${pct}%`} size="sm" />
-            <MicroLabel>{scopeMeta.phrase}</MicroLabel>
-          </View>
+          <Card
+            tone="surface"
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: space[2],
+              paddingHorizontal: space[3],
+              paddingVertical: space[2],
+              borderRadius: 999,
+            }}
+          >
+            <AppIcon name="Trophy" size={14} tone="ember" />
+            <MicroLabel tone="ash">YOU</MicroLabel>
+            <Score value={`TOP ${pct}%`} size="sm" tone="ember" />
+            <MicroLabel tone="ash">{scopeMeta.phrase}</MicroLabel>
+          </Card>
         ) : (
           <View />
         )}
@@ -215,6 +265,7 @@ export default function BoardsScreen() {
             style={{
               width: 18,
               height: 18,
+              borderRadius: 4,
               borderWidth: 1,
               borderColor: colors.ink,
               backgroundColor: verifiedOnly ? colors.ink : 'transparent',
@@ -224,7 +275,28 @@ export default function BoardsScreen() {
         </Pressable>
       </View>
 
+      {/* Column header row — Strava-style RANK / ATHLETE / VALUE. */}
       <HairlineRule style={{ marginTop: space[4] }} />
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: SCREEN_PADDING,
+          paddingVertical: space[2],
+          backgroundColor: colors.surface,
+        }}
+      >
+        <View style={{ width: 36 }}>
+          <MicroLabel>RANK</MicroLabel>
+        </View>
+        <View style={{ flex: 1, paddingHorizontal: space[3] }}>
+          <MicroLabel>ATHLETE</MicroLabel>
+        </View>
+        <View style={{ minWidth: 84, alignItems: 'flex-end' }}>
+          <MicroLabel>{currentMetric?.unit ? currentMetric.unit.toUpperCase() : 'VALUE'}</MicroLabel>
+        </View>
+      </View>
+      <HairlineRule />
     </View>
   );
 
@@ -244,14 +316,33 @@ export default function BoardsScreen() {
         ItemSeparatorComponent={() => <HairlineRule />}
         ListEmptyComponent={
           !boardQ.isLoading ? (
-            <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[10], alignItems: 'flex-start' }}>
+            <View
+              style={{
+                paddingHorizontal: SCREEN_PADDING,
+                paddingVertical: space[9],
+                alignItems: 'center',
+              }}
+            >
+              <View style={{ marginBottom: space[4] }}>
+                <AppIcon name="Trophy" size={48} tone="ash" />
+              </View>
               {needsSchool ? (
                 <>
-                  <Txt variant="display4" tone="ash" weight="semibold">
+                  <Txt
+                    variant="display4"
+                    weight="bold"
+                    style={{ textAlign: 'center' }}
+                  >
                     Pick your school to see this board.
                   </Txt>
-                  <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
-                    {scope === 'nearby' ? 'Nearby pulls from schools around yours.' : 'School scope ranks the kids you actually line up against.'}
+                  <Txt
+                    variant="body"
+                    tone="ash"
+                    style={{ marginTop: space[3], textAlign: 'center' }}
+                  >
+                    {scope === 'nearby'
+                      ? 'Nearby pulls from schools around yours.'
+                      : 'School scope ranks the kids you actually line up against.'}
                   </Txt>
                   <View style={{ marginTop: space[5], alignSelf: 'stretch' }}>
                     <PrimaryButton
@@ -263,19 +354,35 @@ export default function BoardsScreen() {
                 </>
               ) : verifiedOnly ? (
                 <>
-                  <Txt variant="display4" tone="ash" weight="semibold">
+                  <Txt
+                    variant="display4"
+                    weight="bold"
+                    style={{ textAlign: 'center' }}
+                  >
                     No verified marks yet.
                   </Txt>
-                  <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
+                  <Txt
+                    variant="body"
+                    tone="ash"
+                    style={{ marginTop: space[3], textAlign: 'center' }}
+                  >
                     Turn off verified-only to see self-reported marks while teammates co-sign.
                   </Txt>
                 </>
               ) : (
                 <>
-                  <Txt variant="display4" tone="ash" weight="semibold">
+                  <Txt
+                    variant="display4"
+                    weight="bold"
+                    style={{ textAlign: 'center' }}
+                  >
                     Be the first name on this board.
                   </Txt>
-                  <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
+                  <Txt
+                    variant="body"
+                    tone="ash"
+                    style={{ marginTop: space[3], textAlign: 'center' }}
+                  >
                     Drop a mark on the You tab — it lands here the second you save.
                   </Txt>
                   <View style={{ marginTop: space[5], alignSelf: 'stretch' }}>

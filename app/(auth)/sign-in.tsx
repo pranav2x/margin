@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 
 import { Txt } from '../../components/primitives/Text';
 import { MicroLabel } from '../../components/primitives/MicroLabel';
-import { PrimaryButton } from '../../components/primitives/PrimaryButton';
+import { PressableScale } from '../../components/primitives/PressableScale';
 import { useTheme, space, SCREEN_PADDING } from '../../theme';
 import {
   signInWithApple,
@@ -15,6 +16,57 @@ import {
 
 const googleAvailable = true;
 const appleAvailable = !isExpoGo && appleAuthAvailable();
+const BUTTON_HEIGHT = 48;
+const BUTTON_RADIUS = 12;
+
+// Strava sign-in convention: no ember on this screen. The wordmark is the hero,
+// and the auth providers wear their system colors. The single accent moment
+// stays parked for the next surface in.
+interface AuthButtonProps {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  variant: 'apple' | 'google';
+  accessibilityLabel: string;
+}
+
+function AuthButton({ label, onPress, disabled, variant, accessibilityLabel }: AuthButtonProps) {
+  const { colors } = useTheme();
+  // Apple = black bg + white text per system standard.
+  // Google = paper bg + ink text + ink border (Strava-faithful).
+  const bg = variant === 'apple' ? colors.void : colors.paper;
+  const fg = variant === 'apple' ? colors.paper : colors.ink;
+  const border = variant === 'apple' ? 'transparent' : colors.ink;
+  const borderWidth = variant === 'apple' ? 0 : 1;
+
+  return (
+    <PressableScale
+      onPress={() => {
+        if (disabled) return;
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        onPress();
+      }}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      style={{
+        backgroundColor: bg,
+        borderColor: border,
+        borderWidth,
+        borderRadius: BUTTON_RADIUS,
+        minHeight: BUTTON_HEIGHT,
+        paddingHorizontal: space[5],
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: disabled ? 0.4 : 1,
+        alignSelf: 'stretch',
+      }}
+    >
+      <Txt variant="label" style={{ color: fg, letterSpacing: 0.6 }}>
+        {label}
+      </Txt>
+    </PressableScale>
+  );
+}
 
 export default function SignIn() {
   const insets = useSafeAreaInsets();
@@ -58,43 +110,50 @@ export default function SignIn() {
           paddingBottom: insets.bottom + space[6],
         }}
       >
-        <View style={{ flex: 1, justifyContent: 'center', paddingBottom: space[9] }}>
+        {/* Top half — centered ELEVATE wordmark + tagline. */}
+        <View
+          style={{
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
           <Txt
             variant="display1"
+            weight="extrabold"
             accessibilityRole="header"
+            style={{ textAlign: 'center' }}
           >
-            Elevate
+            ELEVATE
           </Txt>
           <Txt
             variant="bodyLg"
             tone="ash"
-            style={{ marginTop: space[4] }}
+            style={{ marginTop: space[4], textAlign: 'center' }}
           >
-            Your game, by the numbers.
+            Verified stats. Real recruiting.
           </Txt>
         </View>
 
+        {/* Bottom half — stacked auth buttons. */}
         <View style={{ gap: space[3] }}>
-          {googleAvailable && (
-            <PrimaryButton
-              label="CONTINUE WITH GOOGLE"
-              full
-              onPress={handleGoogle}
+          {appleAvailable && (
+            <AuthButton
+              label="CONTINUE WITH APPLE"
+              variant="apple"
+              onPress={handleApple}
               disabled={loading}
-              accessibilityRole="button"
-              accessibilityLabel="Continue with Google"
+              accessibilityLabel="Continue with Apple"
             />
           )}
 
-          {appleAvailable && (
-            <PrimaryButton
-              label="CONTINUE WITH APPLE"
-              variant="ghost"
-              full
-              onPress={handleApple}
+          {googleAvailable && (
+            <AuthButton
+              label="CONTINUE WITH GOOGLE"
+              variant="google"
+              onPress={handleGoogle}
               disabled={loading}
-              accessibilityRole="button"
-              accessibilityLabel="Continue with Apple"
+              accessibilityLabel="Continue with Google"
             />
           )}
 
@@ -102,11 +161,28 @@ export default function SignIn() {
             <Txt
               variant="bodySm"
               tone="ash"
+              style={{ textAlign: 'center', marginTop: space[2] }}
               accessibilityLiveRegion="polite"
             >
               {error}
             </Txt>
           )}
+
+          <Txt
+            variant="bodySm"
+            tone="ash"
+            style={{ textAlign: 'center', marginTop: space[3] }}
+          >
+            By continuing you agree to our{' '}
+            <Txt variant="bodySm" tone="ash" weight="semibold">
+              Terms
+            </Txt>{' '}
+            and{' '}
+            <Txt variant="bodySm" tone="ash" weight="semibold">
+              Community Rules
+            </Txt>
+            .
+          </Txt>
 
           <MicroLabel style={{ textAlign: 'center', marginTop: space[2] }}>
             AGES 13 AND UP

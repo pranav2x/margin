@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { View, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, ScrollView, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -12,12 +12,11 @@ import { MotiView } from 'moti';
 import { Txt } from '../../components/primitives/Text';
 import { MicroLabel } from '../../components/primitives/MicroLabel';
 import { HairlineRule } from '../../components/primitives/HairlineRule';
-import { Grain } from '../../components/primitives/Grain';
 import { Avatar } from '../../components/primitives/Avatar';
 import { PrimaryButton } from '../../components/primitives/PrimaryButton';
-import { RollUpNumber } from '../../components/motion/RollUpNumber';
-import { Score } from '../../components/motion/Score';
-import { StatLine, VerifiedMark } from '../../components/composite/StatLine';
+import { StatBlock, StatBlockRow } from '../../components/primitives/StatBlock';
+import { Card } from '../../components/primitives/Card';
+import { StatLine } from '../../components/composite/StatLine';
 import { ShareCard, type HeadlineStat } from '../../components/composite/ShareCard';
 import { StatEntrySheet, type StatEntrySheetRef } from '../../components/composite/StatEntrySheet';
 import { ProfileEditSheet, type ProfileEditSheetRef } from '../../components/composite/ProfileEditSheet';
@@ -128,6 +127,16 @@ export default function YouScreen() {
   const onSaved = () => queryClient.invalidateQueries({ queryKey: ['my-stats'] });
   const onProfileSaved = () => queryClient.invalidateQueries({ queryKey: ['my-profile'] });
 
+  // Stat hero row — counts that summarise the athlete at a glance.
+  // Verified count anchors trust; total marks shows breadth; streak (in ember)
+  // carries the one-accent narrative beat.
+  const verifiedCount = useMemo(
+    () => stats.filter((s) => s.verified && s.is_plausible !== false).length,
+    [stats],
+  );
+  const totalCount = stats.length;
+  const streakDays = streak?.current ?? 0;
+
   const share = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
@@ -164,59 +173,118 @@ export default function YouScreen() {
     .filter(Boolean)
     .join(' · ');
 
+  // Headline stat is the narrative metric the share card already promotes.
+  // Render it as the single xl StatBlock in the hero so it earns the ember.
+  const headlineValue = top ? formatStatValue(top.value, top.metric.unit) : null;
+  const headlineLabel = top
+    ? `${top.metric.label.toUpperCase()}${top.metric.unit ? ` · ${top.metric.unit}` : ''}`
+    : null;
+
   return (
     <BottomSheetModalProvider>
       <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top }}>
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 140 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + space[10] }}
         >
-          {/* Header */}
-          <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[6] }}>
-            {/* Newsprint grain behind the masthead — faint, non-interactive. */}
-            <Grain />
-            <Avatar uri={profile?.avatar_url ?? undefined} size={88} />
-            <Txt variant="display1" accessibilityRole="header" style={{ marginTop: space[5] }}>
+          {/* Masthead — Strava-faithful: centered avatar, big name, handle,
+              meta line, then one compact ghost Edit Profile button. Whitespace
+              does the work; no orange in the masthead. */}
+          <View
+            style={{
+              paddingHorizontal: SCREEN_PADDING,
+              paddingTop: space[7],
+              alignItems: 'center',
+            }}
+          >
+            <Avatar uri={profile?.avatar_url ?? undefined} size={96} />
+            <Txt
+              variant="display3"
+              weight="bold"
+              accessibilityRole="header"
+              style={{ marginTop: space[4], textAlign: 'center' }}
+            >
               {profile?.display_name ?? `@${handle}`}
             </Txt>
-            <Txt variant="bodySm" tone="ash" weight="semibold" style={{ marginTop: space[1], fontVariant: ['tabular-nums'] }}>
+            <Txt
+              variant="bodyLg"
+              tone="ash"
+              weight="semibold"
+              style={{ marginTop: space[1], textAlign: 'center', fontVariant: ['tabular-nums'] }}
+            >
               @{handle}
             </Txt>
-            {metaLine.length > 0 && <MicroLabel style={{ marginTop: space[4] }}>{metaLine}</MicroLabel>}
+            {metaLine.length > 0 && (
+              <Txt
+                variant="bodySm"
+                tone="ash"
+                style={{ marginTop: space[2], textAlign: 'center' }}
+              >
+                {metaLine}
+              </Txt>
+            )}
 
-            <View style={{ marginTop: space[5], flexDirection: 'row', alignItems: 'center', gap: space[6] }}>
-              <Pressable
+            <View style={{ marginTop: space[5] }}>
+              <PrimaryButton
+                label="Edit profile"
+                variant="ghost"
+                size="compact"
                 onPress={() => editRef.current?.present()}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel="Edit your profile"
-                style={{ minHeight: 44, justifyContent: 'center' }}
-              >
-                <MicroLabel tone="ink">EDIT PROFILE</MicroLabel>
-              </Pressable>
-              <Pressable
-                onPress={() => { Haptics.selectionAsync(); router.push('/confirm'); }}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel="Confirm teammates' marks"
-                style={{ minHeight: 44, justifyContent: 'center' }}
-              >
-                <MicroLabel tone="ink">CONFIRM TEAMMATES</MicroLabel>
-              </Pressable>
+              />
             </View>
           </View>
 
-          {/* Active streak. The flame numeral is a sanctioned ember accent and
-              the 7-day strip stays monochrome. At a 7/14/30 milestone the block
-              becomes a shareable ember celebration that flashes in. Hidden when
-              there's no live streak so a lapsed athlete is never guilted. */}
+          {/* Headline stat — the single ember moment of the screen. */}
+          {headlineValue && headlineLabel ? (
+            <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8] }}>
+              <StatBlock
+                value={headlineValue}
+                label={headlineLabel}
+                size="xl"
+                tone="accent"
+                align="center"
+              />
+            </View>
+          ) : null}
+
+          {/* Stat hero row — verified marks · streak · total marks. Center
+              aligned, hairline dividers between blocks. Streak rides ember to
+              keep one stat narrative; the rest stay ink. */}
+          <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[7] }}>
+            <StatBlockRow>
+              <StatBlock
+                value={verifiedCount}
+                label="VERIFIED"
+                align="center"
+                size="md"
+              />
+              <StatBlock
+                value={streakDays}
+                label="DAY STREAK"
+                align="center"
+                size="md"
+                tone={streakDays > 0 ? 'accent' : 'default'}
+              />
+              <StatBlock
+                value={totalCount}
+                label="TRACKED"
+                align="center"
+                size="md"
+              />
+            </StatBlockRow>
+          </View>
+
+          {/* Edition streak — a Card so it reads as its own module, separated
+              from the stat lines below. Milestone celebration swaps in the
+              shareable card; otherwise the standard StreakBlock. */}
           {milestone ? (
             <MotiView
               from={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ type: 'timing', duration: 320 }}
-              style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[7] }}
+              style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8] }}
             >
+              <MicroLabel style={{ marginBottom: space[3] }}>EDITION STREAK</MicroLabel>
               <StreakMilestoneCard
                 ref={milestoneRef}
                 handle={handle}
@@ -224,45 +292,47 @@ export default function YouScreen() {
                 school={profile?.school?.name ?? null}
                 sportLabel={sportLabel}
               />
-              <PrimaryButton label="SHARE STREAK" variant="ghost" full onPress={shareMilestone} style={{ marginTop: space[4] }} />
+              <PrimaryButton
+                label="Share streak"
+                variant="ghost"
+                full
+                onPress={shareMilestone}
+                style={{ marginTop: space[4] }}
+              />
             </MotiView>
           ) : streak && streak.current >= 1 ? (
-            <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[7] }}>
-              <StreakBlock streak={streak} />
+            <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8] }}>
+              <MicroLabel style={{ marginBottom: space[3] }}>EDITION STREAK</MicroLabel>
+              <Card padded>
+                <StreakBlock streak={streak} />
+              </Card>
             </View>
           ) : null}
-          {/* Headline number */}
-          {top ? (
-            <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[7] }}>
-              <MicroLabel>{top.metric.label.toUpperCase()}{top.metric.unit ? ` · ${top.metric.unit}` : ''}</MicroLabel>
-              <View style={{ marginTop: space[3], flexDirection: 'row', alignItems: 'flex-end' }}>
-                {Number.isInteger(top.value) ? (
-                  <RollUpNumber value={top.value} size="xl" />
-                ) : (
-                  <Score value={formatStatValue(top.value, top.metric.unit)} size="xl" />
-                )}
-              </View>
-              <View style={{ marginTop: space[4] }}>
-                <VerifiedMark verified={top.verified} />
-              </View>
-            </View>
-          ) : (
-            <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[7] }}>
-              <Txt variant="display4" tone="ash" weight="semibold">
-                No stats yet — add your first below.
-              </Txt>
-            </View>
-          )}
 
-          {/* Share card (capture target) */}
-          <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[7] }}>
-            <ShareCard ref={cardRef} handle={handle} school={profile?.school?.name ?? null} sportLabel={sportLabel} stats={cardStats} />
-            <PrimaryButton label="SHARE CARD" variant="ghost" full onPress={share} style={{ marginTop: space[4] }} />
+          {/* Share card — preserved as the capture target. Sits inside the
+              flow with a ghost CTA so the orange stays one beat away. */}
+          <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8] }}>
+            <MicroLabel style={{ marginBottom: space[3] }}>SHARE CARD</MicroLabel>
+            <ShareCard
+              ref={cardRef}
+              handle={handle}
+              school={profile?.school?.name ?? null}
+              sportLabel={sportLabel}
+              stats={cardStats}
+            />
+            <PrimaryButton
+              label="Share card"
+              variant="ghost"
+              full
+              onPress={share}
+              style={{ marginTop: space[4] }}
+            />
           </View>
 
-          {/* Stat lines grouped by sport */}
-          <HairlineRule style={{ marginTop: space[8] }} />
-          <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[6], paddingBottom: space[2] }}>
+          {/* Stat lines — grouped per sport. Each group sits under a MicroLabel
+              header (e.g. "FOOTBALL") and rows are separated by hairlines only.
+              No card wrapper so the typographic grid reads as the structure. */}
+          <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8] }}>
             <MicroLabel>STAT LINES</MicroLabel>
           </View>
 
@@ -276,13 +346,18 @@ export default function YouScreen() {
               </Txt>
             </View>
           ) : (
-            // Grouped stat rows sit one elevation step up (paper → surface); the
-            // existing hairlines stay the only dividers — no new borders/shadows.
-            <View style={{ backgroundColor: colors.surface }}>
-              {grouped.map((group) => (
+            <View style={{ paddingTop: space[3] }}>
+              {grouped.map((group, gi) => (
                 <View key={group.sport}>
-                  <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[5], paddingBottom: space[1] }}>
-                    <Txt variant="display4">{SPORT_LABELS[group.sport]}</Txt>
+                  {gi > 0 && <HairlineRule style={{ marginTop: space[5] }} />}
+                  <View
+                    style={{
+                      paddingHorizontal: SCREEN_PADDING,
+                      paddingTop: gi === 0 ? space[2] : space[5],
+                      paddingBottom: space[2],
+                    }}
+                  >
+                    <MicroLabel>{SPORT_LABELS[group.sport].toUpperCase()}</MicroLabel>
                   </View>
                   <HairlineRule />
                   {group.rows.map((s, i) => (
@@ -296,18 +371,28 @@ export default function YouScreen() {
             </View>
           )}
 
+          {/* Bottom CTA — the only filled ember button on the screen. */}
           <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8] }}>
-            <PrimaryButton label="ADD A STAT" full onPress={() => sheetRef.current?.present()} />
+            <PrimaryButton label="Add a stat" full onPress={() => sheetRef.current?.present()} />
           </View>
 
-          <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[6] }}>
+          <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[5] }}>
+            <PrimaryButton
+              label="Confirm teammates"
+              variant="ghost"
+              full
+              onPress={() => { Haptics.selectionAsync(); router.push('/confirm'); }}
+            />
+          </View>
+
+          <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[5] }}>
             {signOutError ? (
               <Txt variant="bodySm" tone="ash" style={{ marginBottom: space[2], textAlign: 'center' }}>
                 {signOutError}
               </Txt>
             ) : null}
             <PrimaryButton
-              label="SIGN OUT"
+              label="Sign out"
               variant="ghost"
               full
               disabled={isSigningOut}

@@ -12,6 +12,10 @@ import { MicroLabel } from '../../components/primitives/MicroLabel';
 import { HairlineRule } from '../../components/primitives/HairlineRule';
 import { Avatar } from '../../components/primitives/Avatar';
 import { PrimaryButton } from '../../components/primitives/PrimaryButton';
+import { Card } from '../../components/primitives/Card';
+import { StatBlock, StatBlockRow } from '../../components/primitives/StatBlock';
+import { AppIcon } from '../../components/primitives/AppIcon';
+import { AvatarMeta } from '../../components/composite/AvatarMeta';
 import { Score } from '../../components/motion/Score';
 import { VerifiedMark } from '../../components/composite/StatLine';
 import { BattleShareCard } from '../../components/composite/BattleShareCard';
@@ -30,7 +34,7 @@ import {
   type PlayerStat,
   type Sport,
 } from '../../lib/hooks/usePlayerProfile';
-import { useTheme, space, SCREEN_PADDING, fonts } from '../../theme';
+import { useTheme, space, SCREEN_PADDING, type, fonts } from '../../theme';
 import { recordActivity } from '../../lib/hooks/useStreak';
 import { useNearbySchools } from '../../lib/hooks/useNearbySchools';
 
@@ -53,62 +57,101 @@ interface CompRow {
   winner: Winner;
 }
 
+// One opponent row in the discovery lists. AvatarMeta on the left, a compact
+// "BATTLE" CTA on the right. Hairlines between rows handle the separation;
+// the row itself stays card-less so the lists read as one columnar grid.
 function OpponentRow({ p, onPress }: { p: MyProfile; onPress: () => void }) {
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`Battle @${p.handle}`}
-      style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: SCREEN_PADDING, paddingVertical: space[4], minHeight: 56 }}
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: SCREEN_PADDING,
+        paddingVertical: space[4],
+        minHeight: 64,
+        gap: space[3],
+      }}
     >
-      <Avatar uri={p.avatar_url ?? undefined} size={44} />
-      <View style={{ flex: 1, marginLeft: space[4] }}>
-        <Txt variant="bodyLg">@{p.handle}</Txt>
-        {p.school?.name ? <MicroLabel style={{ marginTop: 2 }}>{p.school.name}</MicroLabel> : null}
+      <View style={{ flex: 1 }}>
+        <AvatarMeta
+          avatarUrl={p.avatar_url ?? undefined}
+          handle={p.handle ?? 'player'}
+          meta={p.school?.name ?? undefined}
+          size="md"
+          onPress={onPress}
+        />
       </View>
-    </Pressable>
+      <PrimaryButton
+        label="BATTLE"
+        size="compact"
+        onPress={onPress}
+        accessibilityLabel={`Battle @${p.handle ?? 'player'}`}
+      />
+    </View>
   );
 }
 
+// Section header for the discovery lists. Single MicroLabel above a hairline.
+function SectionHeader({ label }: { label: string }) {
+  return (
+    <View
+      style={{
+        paddingHorizontal: SCREEN_PADDING,
+        paddingTop: space[7],
+        paddingBottom: space[2],
+      }}
+    >
+      <MicroLabel>{label}</MicroLabel>
+    </View>
+  );
+}
+
+// Stat-by-stat row. Left = your value, center = label, right = theirs. The
+// winning side is the one ember beat on the line; ties stay monochrome.
 function ComparisonRow({ row, showWinner, verified }: { row: CompRow; showWinner: boolean; verified?: boolean }) {
-  const { colors } = useTheme();
   const unit = row.metric.unit;
-  // The winning side is a sanctioned ember moment — the one accent marks the
-  // result. The losing side recedes to ash; ties stay monochrome.
   const meWins = showWinner && row.winner === 'me';
   const oppWins = showWinner && row.winner === 'opp';
+  const tie = showWinner && row.winner === 'tie';
+
   return (
-    <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[4] }}>
-      <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-        <View style={{ width: 76, alignItems: 'flex-start' }}>
+    <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[5] }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ flex: 1, alignItems: 'flex-start' }}>
           <Score
             value={formatStatValue(row.mine.value, unit)}
-            size="sm"
-            tone={meWins ? 'ink' : 'ash'}
-            style={meWins ? { color: colors.ember } : undefined}
+            size="md"
+            tone={meWins ? 'ember' : 'ink'}
           />
-          {meWins && <MicroLabel style={{ marginTop: space[1], color: colors.ember }}>WINS</MicroLabel>}
         </View>
 
-        <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: space[2] }}>
-          <Txt variant="bodySm" style={{ textAlign: 'center' }}>{row.metric.label}</Txt>
-          {unit ? <MicroLabel style={{ marginTop: 2 }}>{unit}</MicroLabel> : null}
-          {verified && (
-            <View style={{ marginTop: space[2], alignItems: 'center' }}>
+        <View style={{ flex: 1.2, alignItems: 'center', paddingHorizontal: space[2] }}>
+          <MicroLabel tone="ash">{row.metric.label}</MicroLabel>
+          {unit ? (
+            <Txt
+              variant="bodySm"
+              tone="ash"
+              style={{ marginTop: 2 }}
+            >
+              {unit}
+            </Txt>
+          ) : null}
+          {tie ? (
+            <MicroLabel tone="ink" style={{ marginTop: space[2] }}>TIE</MicroLabel>
+          ) : null}
+          {verified ? (
+            <View style={{ marginTop: space[2] }}>
               <VerifiedMark verified />
             </View>
-          )}
-          {showWinner && row.winner === 'tie' && <MicroLabel tone="ink" style={{ marginTop: space[1] }}>TIE</MicroLabel>}
+          ) : null}
         </View>
 
-        <View style={{ width: 76, alignItems: 'flex-end' }}>
+        <View style={{ flex: 1, alignItems: 'flex-end' }}>
           <Score
             value={formatStatValue(row.theirs.value, unit)}
-            size="sm"
-            tone={oppWins ? 'ink' : 'ash'}
-            style={oppWins ? { color: colors.ember } : undefined}
+            size="md"
+            tone={oppWins ? 'ember' : 'ink'}
           />
-          {oppWins && <MicroLabel style={{ marginTop: space[1], color: colors.ember }}>WINS</MicroLabel>}
         </View>
       </View>
     </View>
@@ -135,7 +178,7 @@ export default function BattlesScreen() {
   const searchQ = useOpponentSearch(query, mySport, me?.id);
   const schoolQ = useSchoolOpponents(me?.school_id ?? null, mySport, me?.id);
 
-  // "NEAR YOU" — opt-in, location-driven discovery. Tapping the CTA hits the
+  // "NEARBY" — opt-in, location-driven discovery. Tapping the CTA hits the
   // foreground permission once; coords are never stored (see useNearbySchools).
   const nearbySchools = useNearbySchools(8);
   const nearbySchoolIds = (nearbySchools.data ?? []).map((s) => s.id);
@@ -211,32 +254,48 @@ export default function BattlesScreen() {
 
   // ── Selection view ────────────────────────────────────────
   if (!opponentId) {
+    const searchResults = searchQ.data ?? [];
+    const schoolResults = schoolQ.data ?? [];
+    const nearbyResults = nearbyOpponentsQ.data ?? [];
+    const isSearching = query.trim().length >= 2;
+    const hasAnyDiscovery = schoolResults.length > 0 || nearbyResults.length > 0;
+
     return (
       <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top }}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + space[10] }}
         >
-          <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[6] }}>
+          {/* Masthead — title + sport line. No orange in the header; the
+              accent waits for a winning comparison row. */}
+          <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[7] }}>
             <MicroLabel>HEAD TO HEAD</MicroLabel>
-            <Txt variant="display1" accessibilityRole="header" style={{ marginTop: space[2] }}>
+            <Txt
+              variant="display3"
+              weight="bold"
+              accessibilityRole="header"
+              style={{ marginTop: space[2] }}
+            >
               Battles
             </Txt>
-            <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[4], lineHeight: 26 }}>
+            <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[2] }}>
               Line up your stats against another athlete in {sportLabel ?? 'your sport'}.
             </Txt>
           </View>
 
           {!mySport ? (
-            <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8] }}>
-              <Txt variant="display4" tone="ash" weight="semibold">
+            <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8], alignItems: 'center' }}>
+              <View style={{ marginBottom: space[4] }}>
+                <AppIcon name="Swords" size={48} tone="ash" />
+              </View>
+              <Txt variant="display4" weight="bold" style={{ textAlign: 'center' }}>
                 A battle needs a sport.
               </Txt>
-              <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
+              <Txt variant="body" tone="ash" style={{ marginTop: space[3], textAlign: 'center' }}>
                 Pick your primary sport so we can line up like-for-like marks.
               </Txt>
-              <View style={{ marginTop: space[5] }}>
+              <View style={{ marginTop: space[5], alignSelf: 'stretch' }}>
                 <PrimaryButton
                   label="SET YOUR SPORT"
                   full
@@ -249,67 +308,101 @@ export default function BattlesScreen() {
             </View>
           ) : (
             <>
-              <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[7] }}>
-                <MicroLabel>SEARCH BY HANDLE</MicroLabel>
-                <TextInput
-                  value={query}
-                  onChangeText={setQuery}
-                  placeholder="@handle"
-                  placeholderTextColor={colors.ash}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  allowFontScaling={false}
+              {/* Search input — Strava-style pill: rounded Card with a Search
+                  icon prefix. The query drives the TRENDING section below. */}
+              <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[6] }}>
+                <Card
+                  tone="surface"
                   style={{
-                    fontFamily: fonts.bold,
-                    fontSize: 24,
-                    lineHeight: 28,
-                    color: colors.ink,
-                    paddingVertical: space[2],
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: space[3],
+                    paddingHorizontal: space[4],
+                    paddingVertical: space[3],
+                    borderRadius: 999,
                   }}
-                />
-                <HairlineRule />
+                >
+                  <AppIcon name="Search" size={18} tone="ash" />
+                  <TextInput
+                    value={query}
+                    onChangeText={setQuery}
+                    placeholder="Search by handle"
+                    placeholderTextColor={colors.ash}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    allowFontScaling={false}
+                    // Match bodyLg type so the input feels typographic, not
+                    // chrome. Family + size both come from theme tokens.
+                    style={[
+                      type.bodyLg,
+                      {
+                        flex: 1,
+                        color: colors.ink,
+                        paddingVertical: 0,
+                        fontFamily: fonts.medium,
+                      },
+                    ]}
+                  />
+                  {query.length > 0 ? (
+                    <Pressable
+                      onPress={() => {
+                        Haptics.selectionAsync();
+                        setQuery('');
+                      }}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel="Clear search"
+                    >
+                      <AppIcon name="X" size={16} tone="ash" />
+                    </Pressable>
+                  ) : null}
+                </Card>
               </View>
 
-              {searchQ.isFetching && (
-                <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[4] }}>
-                  <ActivityIndicator color={colors.ink} />
-                </View>
-              )}
-
-              {query.trim().length >= 2 && (searchQ.data ?? []).length === 0 && !searchQ.isFetching && (
-                <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[5] }}>
-                  <Txt variant="bodyLg" tone="ash" weight="semibold">
-                    No {sportLabel?.toLowerCase()} athletes by that handle.
-                  </Txt>
-                </View>
-              )}
-
-              {(searchQ.data ?? []).map((p, i) => (
-                <View key={p.id}>
-                  {i === 0 && <HairlineRule style={{ marginTop: space[3] }} />}
-                  <OpponentRow p={p} onPress={() => pick(p.id)} />
+              {/* TRENDING — search results when the query is active. Same row
+                  visual as the other sections so the lists feel continuous. */}
+              {isSearching ? (
+                <>
+                  <SectionHeader label="TRENDING" />
                   <HairlineRule />
-                </View>
-              ))}
+                  {searchQ.isFetching ? (
+                    <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[5] }}>
+                      <ActivityIndicator color={colors.ink} />
+                    </View>
+                  ) : searchResults.length === 0 ? (
+                    <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[5] }}>
+                      <Txt variant="body" tone="ash">
+                        No {sportLabel?.toLowerCase() ?? 'sport'} athletes by that handle.
+                      </Txt>
+                    </View>
+                  ) : (
+                    searchResults.map((p, i) => (
+                      <View key={p.id}>
+                        <OpponentRow p={p} onPress={() => pick(p.id)} />
+                        {i < searchResults.length - 1 && <HairlineRule />}
+                      </View>
+                    ))
+                  )}
+                </>
+              ) : null}
 
-              <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8], paddingBottom: space[2] }}>
-                <MicroLabel>AT YOUR SCHOOL</MicroLabel>
-              </View>
+              {/* FROM YOUR SCHOOL — same-sport teammates. */}
+              <SectionHeader label="FROM YOUR SCHOOL" />
               <HairlineRule />
-              {(schoolQ.data ?? []).length === 0 ? (
+              {schoolResults.length === 0 ? (
                 <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[5] }}>
                   {me?.school_id ? (
                     <>
-                      <Txt variant="display4" tone="ash" weight="semibold">
+                      <Txt variant="display4" weight="bold">
                         First name on the wall.
                       </Txt>
-                      <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
+                      <Txt variant="body" tone="ash" style={{ marginTop: space[3] }}>
                         Send your share card to a teammate — they sign up, they show up here.
                       </Txt>
                     </>
                   ) : (
                     <>
-                      <Txt variant="display4" tone="ash" weight="semibold">
+                      <Txt variant="display4" weight="bold">
                         Pick your school to find teammates.
                       </Txt>
                       <View style={{ marginTop: space[4] }}>
@@ -327,25 +420,22 @@ export default function BattlesScreen() {
                   )}
                 </View>
               ) : (
-                (schoolQ.data ?? []).map((p, i) => (
+                schoolResults.map((p, i) => (
                   <View key={p.id}>
                     <OpponentRow p={p} onPress={() => pick(p.id)} />
-                    {i < (schoolQ.data ?? []).length - 1 && <HairlineRule />}
+                    {i < schoolResults.length - 1 && <HairlineRule />}
                   </View>
                 ))
               )}
 
-              {/* NEAR YOU — location-driven, opt-in. The first tap requests
+              {/* NEARBY — location-driven, opt-in. The first tap requests
                   foreground permission; coords leave the device once (RPC)
                   and are never persisted (see useNearbySchools). */}
-              <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8], paddingBottom: space[2] }}>
-                <MicroLabel>NEAR YOU</MicroLabel>
-              </View>
+              <SectionHeader label="NEARBY" />
               <HairlineRule />
-
               {nearbySchools.data == null ? (
                 <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[5] }}>
-                  <Txt variant="bodyLg" tone="ash" style={{ marginBottom: space[4] }}>
+                  <Txt variant="body" tone="ash" style={{ marginBottom: space[4] }}>
                     Find rivals at schools around yours.
                   </Txt>
                   {nearbySchools.loading ? (
@@ -364,29 +454,48 @@ export default function BattlesScreen() {
                           void nearbySchools.locate(8);
                         }}
                       />
-                      {nearbySchools.denied && (
+                      {nearbySchools.denied ? (
                         <MicroLabel style={{ marginTop: space[3] }}>NO LOCATION — STAY AT YOUR SCHOOL</MicroLabel>
-                      )}
+                      ) : null}
                     </>
                   )}
                 </View>
-              ) : (nearbyOpponentsQ.data ?? []).length === 0 ? (
+              ) : nearbyResults.length === 0 ? (
                 <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[5] }}>
-                  <Txt variant="display4" tone="ash" weight="semibold">
+                  <Txt variant="display4" weight="bold">
                     Nobody at the neighbors — yet.
                   </Txt>
-                  <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
-                    The kids at the schools around you haven't put marks up.
+                  <Txt variant="body" tone="ash" style={{ marginTop: space[3] }}>
+                    The kids at the schools around you haven&apos;t put marks up.
                   </Txt>
                 </View>
               ) : (
-                (nearbyOpponentsQ.data ?? []).map((p, i, arr) => (
+                nearbyResults.map((p, i) => (
                   <View key={p.id}>
                     <OpponentRow p={p} onPress={() => pick(p.id)} />
-                    {i < arr.length - 1 && <HairlineRule />}
+                    {i < nearbyResults.length - 1 && <HairlineRule />}
                   </View>
                 ))
               )}
+
+              {/* Empty state — only when neither query nor discovery has any
+                  rows to show. Centered Swords + a directive headline. */}
+              {!isSearching && !hasAnyDiscovery ? (
+                <View
+                  style={{
+                    paddingHorizontal: SCREEN_PADDING,
+                    paddingVertical: space[9],
+                    alignItems: 'center',
+                  }}
+                >
+                  <View style={{ marginBottom: space[4] }}>
+                    <AppIcon name="Swords" size={48} tone="ash" />
+                  </View>
+                  <Txt variant="display4" weight="bold" style={{ textAlign: 'center' }}>
+                    Find someone to battle.
+                  </Txt>
+                </View>
+              ) : null}
             </>
           )}
         </ScrollView>
@@ -397,41 +506,160 @@ export default function BattlesScreen() {
   // ── Comparison view ───────────────────────────────────────
   return (
     <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top }}>
-      <View style={{ height: 56, paddingHorizontal: SCREEN_PADDING, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Pressable onPress={() => { Haptics.selectionAsync(); setOpponentId(null); }} hitSlop={12} accessibilityRole="button">
+      {/* Compact chrome bar — change opponent (back) on the left, view
+          profile on the right. Hairline underline closes it off. */}
+      <View
+        style={{
+          height: 48,
+          paddingHorizontal: SCREEN_PADDING,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <Pressable
+          onPress={() => {
+            Haptics.selectionAsync();
+            setOpponentId(null);
+          }}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Change opponent"
+          style={{ flexDirection: 'row', alignItems: 'center', gap: space[2] }}
+        >
+          <AppIcon name="ChevronLeft" size={18} tone="ink" />
           <MicroLabel tone="ink">CHANGE OPPONENT</MicroLabel>
         </Pressable>
-        <Pressable onPress={() => router.push(`/player/${opponentId}` as never)} hitSlop={12} accessibilityRole="button">
+        <Pressable
+          onPress={() => router.push(`/player/${opponentId}` as never)}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="View opponent profile"
+        >
           <MicroLabel tone="ink">VIEW PROFILE</MicroLabel>
         </Pressable>
       </View>
       <HairlineRule />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}>
-        {/* Tally header — one elevation step up (paper → surface). The tonal
-            step alone sets the score band off from the list; no new borders. */}
-        <View style={{ backgroundColor: colors.surface, paddingBottom: space[6] }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: SCREEN_PADDING, paddingTop: space[7] }}>
-            <View style={{ flex: 1, alignItems: 'center' }}>
-              <Avatar uri={me?.avatar_url ?? undefined} size={56} />
-              <Txt variant="bodySm" weight="semibold" numberOfLines={1} style={{ marginTop: space[2], fontVariant: ['tabular-nums'] }}>@{me?.handle ?? 'you'}</Txt>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + space[10] }}
+      >
+        {/* Two-avatar header — both faces side-by-side with an ember "VS"
+            label between. The whole band sits on `surface` so it reads as
+            one elevated module before the lines below. */}
+        <View
+          style={{
+            backgroundColor: colors.surface,
+            paddingHorizontal: SCREEN_PADDING,
+            paddingTop: space[7],
+            paddingBottom: space[7],
+          }}
+        >
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <View style={{ flex: 1, alignItems: 'center', gap: space[3] }}>
+              <Avatar uri={me?.avatar_url ?? undefined} size={88} />
+              <Txt
+                variant="bodyLg"
+                weight="semibold"
+                numberOfLines={1}
+                style={{ marginTop: space[1], fontVariant: ['tabular-nums'] }}
+              >
+                @{me?.handle ?? 'you'}
+              </Txt>
+              {me?.school?.name ? (
+                <Txt
+                  variant="bodySm"
+                  tone="ash"
+                  numberOfLines={1}
+                  style={{ textAlign: 'center' }}
+                >
+                  {me.school.name}
+                </Txt>
+              ) : null}
             </View>
-            <View style={{ alignItems: 'center', paddingHorizontal: space[4] }}>
-              <Score value={`${myWins}–${oppWins}`} size="xl" />
-              <MicroLabel style={{ marginTop: space[2] }}>{ties > 0 ? `${ties} TIE${ties > 1 ? 'S' : ''}` : 'ALL MARKS'}</MicroLabel>
+
+            <View
+              style={{
+                width: 56,
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingHorizontal: space[2],
+              }}
+            >
+              <MicroLabel style={{ color: colors.ember, letterSpacing: 1.6 }}>
+                VS
+              </MicroLabel>
             </View>
-            <View style={{ flex: 1, alignItems: 'center' }}>
-              <Avatar uri={opp?.avatar_url ?? undefined} size={56} />
-              <Txt variant="bodySm" weight="semibold" numberOfLines={1} style={{ marginTop: space[2], fontVariant: ['tabular-nums'] }}>@{opp?.handle ?? ''}</Txt>
+
+            <View style={{ flex: 1, alignItems: 'center', gap: space[3] }}>
+              <Avatar uri={opp?.avatar_url ?? undefined} size={88} />
+              <Txt
+                variant="bodyLg"
+                weight="semibold"
+                numberOfLines={1}
+                style={{ marginTop: space[1], fontVariant: ['tabular-nums'] }}
+              >
+                @{opp?.handle ?? ''}
+              </Txt>
+              {opp?.school?.name ? (
+                <Txt
+                  variant="bodySm"
+                  tone="ash"
+                  numberOfLines={1}
+                  style={{ textAlign: 'center' }}
+                >
+                  {opp.school.name}
+                </Txt>
+              ) : null}
             </View>
           </View>
+        </View>
 
-          {/* Verified-only sub-tally (the subset both sides have peer-verified). */}
-          {verifiedRows.length > 0 && (
-            <View style={{ alignItems: 'center', paddingTop: space[3] }}>
+        {/* TALLY BAND — WINS / TIES / LOSSES (you vs them). The winning side
+            per metric is the orange one; tie is neutral. StatBlockRow gives
+            the hairline dividers between blocks. */}
+        <View
+          style={{
+            backgroundColor: colors.surface,
+            paddingHorizontal: SCREEN_PADDING,
+            paddingBottom: space[7],
+          }}
+        >
+          <StatBlockRow>
+            <StatBlock
+              value={myWins}
+              label="WINS"
+              align="center"
+              size="lg"
+              tone={myWins > oppWins ? 'accent' : 'default'}
+            />
+            <StatBlock
+              value={ties}
+              label="TIES"
+              align="center"
+              size="lg"
+            />
+            <StatBlock
+              value={oppWins}
+              label="LOSSES"
+              align="center"
+              size="lg"
+              tone={oppWins > myWins ? 'accent' : 'default'}
+            />
+          </StatBlockRow>
+
+          {verifiedRows.length > 0 ? (
+            <View style={{ alignItems: 'center', marginTop: space[5] }}>
               <MicroLabel>{`VERIFIED ONLY · ${vMyWins}–${vOppWins}`}</MicroLabel>
             </View>
-          )}
+          ) : null}
         </View>
 
         {oppProfileQ.isLoading || oppStatsQ.isLoading ? (
@@ -439,25 +667,47 @@ export default function BattlesScreen() {
             <ActivityIndicator color={colors.ink} />
           </View>
         ) : comparison.length === 0 ? (
-          <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8] }}>
-            <Txt variant="display4" tone="ash" weight="semibold">
+          <View
+            style={{
+              paddingHorizontal: SCREEN_PADDING,
+              paddingTop: space[9],
+              alignItems: 'center',
+            }}
+          >
+            <View style={{ marginBottom: space[4] }}>
+              <AppIcon name="Swords" size={48} tone="ash" />
+            </View>
+            <Txt variant="display4" weight="bold" style={{ textAlign: 'center' }}>
               No shared metrics yet.
             </Txt>
-            <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
+            <Txt
+              variant="body"
+              tone="ash"
+              style={{ marginTop: space[3], textAlign: 'center' }}
+            >
               You both need a stat on the same metric to compare.
             </Txt>
           </View>
         ) : (
           <>
-            {/* Every plausible shared mark counts. Rows verified on both sides
-                are badged; the sub-tally above tracks the verified-only score. */}
-            <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8], paddingBottom: space[2] }}>
+            {/* Stat-by-stat rows — every plausible shared mark counts. Rows
+                verified on both sides earn a small mark; the orange goes on
+                the winning side's Score. Ties stay neutral. */}
+            <View
+              style={{
+                paddingHorizontal: SCREEN_PADDING,
+                paddingTop: space[7],
+                paddingBottom: space[2],
+              }}
+            >
               <MicroLabel>ALL MARKS · BOTH IN RANGE</MicroLabel>
             </View>
             <HairlineRule />
             {countedRows.length === 0 ? (
               <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[5] }}>
-                <Txt variant="bodyLg" tone="ash">No in-range marks on the same metric yet.</Txt>
+                <Txt variant="body" tone="ash">
+                  No in-range marks on the same metric yet.
+                </Txt>
               </View>
             ) : (
               countedRows.map((row, i) => (
@@ -468,7 +718,9 @@ export default function BattlesScreen() {
               ))
             )}
 
-            {/* Share card */}
+            {/* Share card — preserved as the capture target. Sits inside the
+                flow with a primary "Share battle" CTA + a ghost "End battle"
+                that returns to discovery. */}
             <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8] }}>
               <BattleShareCard
                 ref={cardRef}
@@ -479,14 +731,35 @@ export default function BattlesScreen() {
                 oppWins={oppWins}
                 hasUncounted={notCounted.length > 0}
               />
-              <PrimaryButton label="SHARE BATTLE" variant="ghost" full onPress={share} style={{ marginTop: space[4] }} />
+              <PrimaryButton
+                label="SHARE BATTLE"
+                full
+                onPress={share}
+                style={{ marginTop: space[4] }}
+              />
+              <PrimaryButton
+                label="END BATTLE"
+                variant="ghost"
+                full
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setOpponentId(null);
+                }}
+                style={{ marginTop: space[3] }}
+              />
             </View>
 
-            {/* Not counted: a mark is outside its plausible range on one or both
-                sides, so it stays out of the tally. */}
-            {notCounted.length > 0 && (
+            {/* Not counted — a mark is outside its plausible range on one or
+                both sides, so it stays out of the tally. Dimmed but legible. */}
+            {notCounted.length > 0 ? (
               <>
-                <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8], paddingBottom: space[2] }}>
+                <View
+                  style={{
+                    paddingHorizontal: SCREEN_PADDING,
+                    paddingTop: space[8],
+                    paddingBottom: space[2],
+                  }}
+                >
                   <MicroLabel>OUTSIDE EXPECTED RANGE · NOT COUNTED</MicroLabel>
                 </View>
                 <HairlineRule />
@@ -497,7 +770,7 @@ export default function BattlesScreen() {
                   </View>
                 ))}
               </>
-            )}
+            ) : null}
           </>
         )}
       </ScrollView>

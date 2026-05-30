@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
+import { Check } from 'lucide-react-native';
 
 import { Txt } from '../../components/primitives/Text';
 import { MicroLabel } from '../../components/primitives/MicroLabel';
@@ -12,25 +13,32 @@ import { PrimaryButton } from '../../components/primitives/PrimaryButton';
 import { useTheme, space, SCREEN_PADDING } from '../../theme';
 import { supabase } from '../../lib/supabase';
 
+const RULES: string[] = [
+  'Report stats honestly. No fakes.',
+  'No harassment, hate, threats, or nudity.',
+  'Compete hard — keep it friendly.',
+  'Report what you see. Reports are reviewed.',
+  'No money, prizes, or wagering. Ever.',
+];
+
+const CHECKBOX_SIZE = 24;
+
 function Checkbox({ checked }: { checked: boolean }) {
   const { colors } = useTheme();
   return (
     <View
       style={{
-        width: 22,
-        height: 22,
+        width: CHECKBOX_SIZE,
+        height: CHECKBOX_SIZE,
+        borderRadius: 4,
         borderWidth: 1,
-        borderColor: colors.ink,
-        backgroundColor: checked ? colors.ink : 'transparent',
+        borderColor: checked ? colors.ember : colors.ink,
+        backgroundColor: checked ? colors.ember : 'transparent',
         alignItems: 'center',
         justifyContent: 'center',
       }}
     >
-      {checked && (
-        <Txt weight="bold" style={{ color: colors.paper, fontSize: 14, lineHeight: 16 }}>
-          ✓
-        </Txt>
-      )}
+      {checked && <Check size={16} color={colors.paper} strokeWidth={3} />}
     </View>
   );
 }
@@ -91,46 +99,60 @@ export default function Eula() {
     >
       <View style={{ paddingHorizontal: SCREEN_PADDING }}>
         <MicroLabel>THE GROUND RULES</MicroLabel>
-        <Txt variant="display2" style={{ marginTop: space[4] }}>
-          Play it{' '}
-          <Txt variant="display2" weight="extrabold" tone="ember">
-            straight.
-          </Txt>
+        <Txt
+          variant="display4"
+          weight="bold"
+          style={{ marginTop: space[3] }}
+        >
+          Community Rules
+        </Txt>
+        <Txt
+          variant="body"
+          tone="ash"
+          style={{ marginTop: space[3] }}
+        >
+          Short version of what we expect from everyone on Elevate.
         </Txt>
       </View>
 
-      <HairlineRule style={{ marginTop: space[6] }} />
-
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[6] }}
+        contentContainerStyle={{
+          paddingHorizontal: SCREEN_PADDING,
+          paddingTop: space[7],
+          paddingBottom: space[6],
+        }}
       >
-        <Txt variant="bodyLg" tone="ash" style={{ lineHeight: 26 }}>
-          Elevate is a community for student athletes to share their stats and stack up
-          against each other. By continuing, you agree to our Terms of Use and Community
-          Rules.
-        </Txt>
-        <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[5], lineHeight: 26 }}>
-          You agree not to post objectionable content — harassment, hate, threats, nudity,
-          or anything abusive — and to report it when you see it. There is zero tolerance for
-          abusive behavior. Accounts that break these rules can be removed.
-        </Txt>
-        <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[5], lineHeight: 26 }}>
-          Elevate is for stats and friendly competition only. It is not a betting, wagering,
-          or prize platform, and involves no money.
-        </Txt>
+        {RULES.map((rule) => (
+          <View
+            key={rule}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'flex-start',
+              gap: space[3],
+              marginBottom: space[4],
+            }}
+          >
+            <View style={{ paddingTop: 2 }}>
+              <Check size={20} color={colors.ember} strokeWidth={2.5} />
+            </View>
+            <Txt variant="bodyLg" style={{ flex: 1 }}>
+              {rule}
+            </Txt>
+          </View>
+        ))}
 
         <Pressable
           onPress={() => router.push('/(auth)/rules')}
           hitSlop={8}
-          style={{ marginTop: space[6], alignSelf: 'flex-start' }}
+          style={{ marginTop: space[4], alignSelf: 'flex-start' }}
         >
           <Txt
             variant="bodyLg"
             weight="semibold"
             style={{ textDecorationLine: 'underline' }}
           >
-            Read the full community rules →
+            Read the full rules →
           </Txt>
         </Pressable>
       </ScrollView>
@@ -146,22 +168,34 @@ export default function Eula() {
         <Pressable
           onPress={toggle}
           hitSlop={8}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: space[3], marginBottom: space[5] }}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: agreed }}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: space[3],
+            marginBottom: space[5],
+          }}
         >
           <Checkbox checked={agreed} />
           <Txt variant="body" style={{ flex: 1 }}>
-            I am 13 or older and I agree to the Terms and Community Rules.
+            I am 13 or older and I agree to the community rules.
           </Txt>
         </Pressable>
 
         {error && (
-          <Txt variant="bodySm" tone="ash" style={{ marginBottom: space[4] }}>
+          <Txt
+            variant="bodySm"
+            tone="ash"
+            style={{ marginBottom: space[4] }}
+            accessibilityLiveRegion="polite"
+          >
             {error}
           </Txt>
         )}
 
         <PrimaryButton
-          label={submitting ? 'SAVING...' : 'AGREE & CONTINUE'}
+          label={submitting ? 'SAVING...' : 'ACCEPT'}
           full
           onPress={accept}
           disabled={!agreed || submitting}

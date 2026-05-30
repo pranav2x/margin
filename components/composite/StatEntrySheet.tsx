@@ -1,12 +1,14 @@
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { View, Pressable, Text, ActivityIndicator, Share, type TextStyle } from 'react-native';
+import { View, Pressable, ScrollView, ActivityIndicator, Share, type TextStyle } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetBackdrop,
   BottomSheetScrollView,
   BottomSheetTextInput,
+  BottomSheetFooter,
   type BottomSheetBackdropProps,
+  type BottomSheetFooterProps,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -17,7 +19,9 @@ import { Txt } from '../primitives/Text';
 import { MicroLabel } from '../primitives/MicroLabel';
 import { HairlineRule } from '../primitives/HairlineRule';
 import { PrimaryButton } from '../primitives/PrimaryButton';
-import { useTheme, space, SCREEN_PADDING, fonts } from '../../theme';
+import { Card } from '../primitives/Card';
+import { AppIcon } from '../primitives/AppIcon';
+import { useTheme, space, SCREEN_PADDING, type as typeScale } from '../../theme';
 import { supabase } from '../../lib/supabase';
 import { recordActivity } from '../../lib/hooks/useStreak';
 import {
@@ -108,6 +112,7 @@ export const StatEntrySheet = forwardRef<StatEntrySheetRef, Props>(function Stat
   const numericValue = Number(value);
   const valueValid = value.length > 0 && !Number.isNaN(numericValue);
   const plausible = metric && valueValid ? isValuePlausible(numericValue, metric, ageBand) : true;
+  const canSave = valueValid && !saving;
 
   const save = async () => {
     if (!metric || !valueValid) return;
@@ -210,15 +215,68 @@ export const StatEntrySheet = forwardRef<StatEntrySheetRef, Props>(function Stat
     }
   };
 
-  const inputStyle: TextStyle = {
-    fontFamily: fonts.extrabold,
-    fontVariant: ['tabular-nums'],
-    fontSize: 40,
-    lineHeight: 44,
-    letterSpacing: -0.6,
+  const close = () => {
+    Haptics.selectionAsync();
+    modalRef.current?.dismiss();
+  };
+
+  const clearMetric = () => {
+    Haptics.selectionAsync();
+    setMetric(null);
+    setValue('');
+  };
+
+  // Strava-style score input: big tabular-nums right-aligned ember-on-focus.
+  const valueInputStyle: TextStyle = {
+    ...typeScale.scoreLg,
+    color: colors.ink,
+    textAlign: 'right',
+    flex: 1,
+    paddingVertical: space[2],
+  };
+
+  const notesInputStyle: TextStyle = {
+    ...typeScale.bodyLg,
     color: colors.ink,
     paddingVertical: space[2],
   };
+
+  const headerTitle = editing ? 'Edit Stat' : 'Add a Stat';
+  const ctaLabel = saving
+    ? 'SAVING…'
+    : editing
+      ? 'SAVE CHANGES'
+      : metric
+        ? 'SAVE STAT'
+        : 'PICK A METRIC';
+
+  // Sticky bottom CTA — `@gorhom/bottom-sheet`'s footer rides above the
+  // keyboard, so BottomSheetTextInput keyboard avoidance keeps working.
+  const renderFooter = useCallback(
+    (props: BottomSheetFooterProps) => (
+      <BottomSheetFooter {...props} bottomInset={insets.bottom}>
+        <View
+          style={{
+            paddingHorizontal: SCREEN_PADDING,
+            paddingTop: space[4],
+            paddingBottom: space[4],
+            backgroundColor: colors.paper,
+            borderTopWidth: 1,
+            borderTopColor: colors.fog,
+          }}
+        >
+          <PrimaryButton
+            label={ctaLabel}
+            full
+            onPress={save}
+            disabled={!canSave || !metric}
+          />
+        </View>
+      </BottomSheetFooter>
+    ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [insets.bottom, colors.paper, colors.fog, ctaLabel, canSave, metric],
+  );
 
   return (
     <BottomSheetModal
@@ -226,175 +284,266 @@ export const StatEntrySheet = forwardRef<StatEntrySheetRef, Props>(function Stat
       snapPoints={snapPoints}
       enablePanDownToClose
       backdropComponent={renderBackdrop}
-      backgroundStyle={{ backgroundColor: colors.surface, borderRadius: 0 }}
-      handleIndicatorStyle={{ backgroundColor: colors.ash }}
+      footerComponent={renderFooter}
+      backgroundStyle={{ backgroundColor: colors.paper, borderRadius: space[4] }}
+      handleIndicatorStyle={{ backgroundColor: colors.fog, width: 36, height: 4 }}
     >
+      {/* Header */}
+      <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[2], paddingBottom: space[4] }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Txt variant="display4">{headerTitle}</Txt>
+          <Pressable
+            onPress={close}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+            hitSlop={12}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: colors.surface,
+            }}
+          >
+            <AppIcon name="X" size={20} tone="ink" />
+          </Pressable>
+        </View>
+      </View>
+      <HairlineRule />
+
       <BottomSheetScrollView
-        contentContainerStyle={{ paddingHorizontal: SCREEN_PADDING, paddingBottom: insets.bottom + space[8] }}
+        contentContainerStyle={{
+          paddingHorizontal: SCREEN_PADDING,
+          paddingTop: space[5],
+          // Reserve space so the footer never overlaps content.
+          paddingBottom: insets.bottom + space[10],
+        }}
         keyboardShouldPersistTaps="handled"
       >
-        <MicroLabel>{editing ? 'EDIT STAT' : 'ADD A STAT'}</MicroLabel>
-
-        {/* Sport + metric selection (add mode only) */}
-        {!editing && !metric && (
-          <View style={{ marginTop: space[4] }}>
-            <Txt variant="display3">Pick a metric.</Txt>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2], marginTop: space[5] }}>
-              {SPORTS.map((s) => {
-                const active = sport === s;
-                return (
-                  <Pressable
-                    key={s}
-                    onPress={() => { Haptics.selectionAsync(); setSport(s); }}
-                    accessibilityRole="button"
-                    style={{
-                      paddingVertical: space[2],
-                      paddingHorizontal: space[4],
-                      borderWidth: 1,
-                      borderColor: colors.ink,
-                      borderRadius: 8,
-                      backgroundColor: active ? colors.ink : 'transparent',
-                      minHeight: 44,
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Text
-                      allowFontScaling={false}
-                      style={{ fontFamily: fonts.semibold, fontSize: 12, letterSpacing: 0.6, color: active ? colors.paper : colors.ink }}
-                    >
-                      {SPORT_LABELS[s]}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            {sport && <HairlineRule style={{ marginTop: space[6] }} />}
-            {sportMetrics.map((m, i) => (
-              <View key={m.id}>
+        {/* SPORT */}
+        <View>
+          <MicroLabel tone="ash">SPORT</MicroLabel>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: space[2], paddingTop: space[3], paddingRight: space[4] }}
+          >
+            {SPORTS.map((s) => {
+              const active = sport === s;
+              return (
                 <Pressable
-                  onPress={() => { Haptics.selectionAsync(); setMetric(m); }}
+                  key={s}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setSport(s);
+                    if (metric && metric.sport !== s) {
+                      setMetric(null);
+                      setValue('');
+                    }
+                  }}
                   accessibilityRole="button"
-                  style={{ paddingVertical: space[4], minHeight: 44, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+                  accessibilityState={{ selected: active }}
+                  style={({ pressed }) => ({
+                    paddingVertical: space[2],
+                    paddingHorizontal: space[4],
+                    borderRadius: 999,
+                    backgroundColor: active
+                      ? pressed
+                        ? colors.emberPressed
+                        : colors.ember
+                      : pressed
+                        ? colors.fog
+                        : colors.surface,
+                    borderWidth: 1,
+                    borderColor: active ? 'transparent' : colors.fog,
+                    minHeight: 36,
+                    justifyContent: 'center',
+                  })}
                 >
-                  <Txt variant="bodyLg">{m.label}</Txt>
-                  {m.unit ? <MicroLabel>{m.unit}</MicroLabel> : null}
+                  <Txt
+                    variant="label"
+                    style={{ color: active ? colors.paper : colors.ink }}
+                  >
+                    {SPORT_LABELS[s]}
+                  </Txt>
                 </Pressable>
-                {i < sportMetrics.length - 1 && <HairlineRule />}
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* METRIC */}
+        <View style={{ marginTop: space[5] }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: space[3],
+            }}
+          >
+            <MicroLabel tone="ash">METRIC</MicroLabel>
+            {metric && !editing && (
+              <Pressable onPress={clearMetric} hitSlop={8} accessibilityRole="button">
+                <MicroLabel tone="ink">CHANGE</MicroLabel>
+              </Pressable>
+            )}
+          </View>
+          {metric ? (
+            <Card padded>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Txt variant="bodyLg" weight="semibold">{metric.label}</Txt>
+                {metric.unit ? <MicroLabel tone="ash">{metric.unit}</MicroLabel> : null}
               </View>
-            ))}
+            </Card>
+          ) : sport ? (
+            sportMetrics.length === 0 ? (
+              <Txt variant="bodySm" tone="ash">No metrics for this sport yet.</Txt>
+            ) : (
+              <Card>
+                {sportMetrics.map((m, i) => (
+                  <View key={m.id}>
+                    <Pressable
+                      onPress={() => {
+                        Haptics.selectionAsync();
+                        setMetric(m);
+                      }}
+                      accessibilityRole="button"
+                      style={({ pressed }) => ({
+                        paddingVertical: space[4],
+                        paddingHorizontal: space[4],
+                        minHeight: 56,
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        backgroundColor: pressed ? colors.fog : 'transparent',
+                      })}
+                    >
+                      <Txt variant="bodyLg">{m.label}</Txt>
+                      {m.unit ? <MicroLabel tone="ash">{m.unit}</MicroLabel> : null}
+                    </Pressable>
+                    {i < sportMetrics.length - 1 && <HairlineRule />}
+                  </View>
+                ))}
+              </Card>
+            )
+          ) : (
+            <Txt variant="bodySm" tone="ash">Pick a sport above to see its metrics.</Txt>
+          )}
+        </View>
+
+        {/* VALUE */}
+        {metric && (
+          <View style={{ marginTop: space[5] }}>
+            <MicroLabel tone="ash">{metric.unit ? `VALUE · ${metric.unit}` : 'VALUE'}</MicroLabel>
+            <Card padded style={{ marginTop: space[3] }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
+                <BottomSheetTextInput
+                  value={value}
+                  onChangeText={(t) => setValue(sanitizeNumeric(t))}
+                  placeholder="0"
+                  placeholderTextColor={colors.ash}
+                  keyboardType="decimal-pad"
+                  autoFocus={!editing}
+                  style={valueInputStyle}
+                />
+                {metric.unit ? (
+                  <Txt variant="bodySm" tone="ash">{metric.unit}</Txt>
+                ) : null}
+              </View>
+            </Card>
+            {!plausible && (
+              <Txt variant="bodySm" tone="ash" weight="semibold" style={{ marginTop: space[3] }}>
+                That's outside the expected range — we'll still save it, but verify it to rank.
+              </Txt>
+            )}
           </View>
         )}
 
-        {/* Value form */}
+        {/* NOTE */}
         {metric && (
-          <View style={{ marginTop: space[4] }}>
-            <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
-              <Txt variant="display3" style={{ flex: 1 }}>{metric.label}</Txt>
-              {!editing && (
-                <Pressable onPress={() => { Haptics.selectionAsync(); setMetric(null); setValue(''); }} hitSlop={8}>
-                  <MicroLabel>CHANGE</MicroLabel>
-                </Pressable>
-              )}
-            </View>
-
-            <View style={{ marginTop: space[6] }}>
-              <MicroLabel>{metric.unit ? `VALUE · ${metric.unit}` : 'VALUE'}</MicroLabel>
-              <BottomSheetTextInput
-                value={value}
-                onChangeText={(t) => setValue(sanitizeNumeric(t))}
-                placeholder="0"
-                placeholderTextColor={colors.ash}
-                keyboardType="decimal-pad"
-                autoFocus={!editing}
-                style={inputStyle}
-              />
-              <HairlineRule />
-              {!plausible && (
-                <Txt variant="bodySm" tone="ash" weight="semibold" style={{ marginTop: space[3] }}>
-                  That's outside the expected range — we'll still save it, but verify it to rank.
-                </Txt>
-              )}
-            </View>
-
-            <View style={{ marginTop: space[6] }}>
-              <MicroLabel>NOTES (OPTIONAL)</MicroLabel>
+          <View style={{ marginTop: space[5] }}>
+            <MicroLabel tone="ash">NOTE · OPTIONAL</MicroLabel>
+            <Card padded style={{ marginTop: space[3] }}>
               <BottomSheetTextInput
                 value={notes}
                 onChangeText={setNotes}
                 placeholder="e.g. wind-legal, FAT timing, splits…"
                 placeholderTextColor={colors.ash}
-                style={{ fontFamily: fonts.medium, fontSize: 16, lineHeight: 22, color: colors.ink, paddingVertical: space[2] }}
+                style={notesInputStyle}
+                multiline
               />
-              <HairlineRule />
-            </View>
+            </Card>
+          </View>
+        )}
 
-            <PrimaryButton
-              label={saving ? 'SAVING…' : editing ? 'SAVE CHANGES' : 'SAVE STAT'}
-              full
-              onPress={save}
-              disabled={saving || !valueValid}
-              style={{ marginTop: space[7] }}
-            />
+        {/* Save error */}
+        {error && (
+          <Txt
+            variant="bodySm"
+            tone="ember"
+            weight="semibold"
+            style={{ marginTop: space[4], textAlign: 'center' }}
+            accessibilityLiveRegion="polite"
+          >
+            {error}
+          </Txt>
+        )}
 
-            {error && (
-              <Txt
-                variant="bodySm"
-                tone="ink"
-                style={{ marginTop: space[3], textAlign: 'center' }}
-                accessibilityLiveRegion="polite"
-              >
-                {error}
+        {/* Verification (edit mode, unverified only). Peer co-sign is the only
+            path that turns a mark Verified — the rest is honest about not being
+            live yet. */}
+        {editing && !editing.verified && (
+          <View style={{ marginTop: space[7] }}>
+            <HairlineRule />
+            <View style={{ marginTop: space[5] }}>
+              <MicroLabel tone="ash">VERIFY THIS MARK</MicroLabel>
+              <Txt variant="bodySm" tone="ash" style={{ marginTop: space[2] }}>
+                Self-reported until a teammate at your school confirms it. One co-sign turns it Verified.
               </Txt>
-            )}
 
-            {/* Verification (edit mode, unverified only). Peer co-sign is the
-                only path that turns a mark Verified — the rest is honest about
-                not being live yet. */}
-            {editing && !editing.verified && (
-              <View style={{ marginTop: space[8] }}>
-                <HairlineRule />
-                <View style={{ marginTop: space[6] }}>
-                  <MicroLabel>VERIFY THIS MARK</MicroLabel>
-                  <Txt variant="bodySm" tone="ash" style={{ marginTop: space[2], lineHeight: 18 }}>
-                    Self-reported until a teammate at your school confirms it. One co-sign turns it Verified.
-                  </Txt>
-
-                  <View style={{ marginTop: space[5], gap: space[3] }}>
-                    <PrimaryButton label="ASK A TEAMMATE TO CONFIRM" full onPress={askTeammate} />
-                    <PrimaryButton label="UPLOAD VIDEO PROOF" variant="ghost" full onPress={uploadVideoProof} />
-                    <View style={{ opacity: 0.4 }}>
-                      <PrimaryButton label="ASK A COACH · COMING LATER" variant="ghost" full disabled onPress={() => undefined} />
-                    </View>
-                    <View style={{ opacity: 0.4 }}>
-                      <PrimaryButton label="EXTERNAL SOURCE · COMING LATER" variant="ghost" full disabled onPress={() => undefined} />
-                    </View>
-                  </View>
-
-                  {requested === 'peer_cosign' && (
-                    <Txt variant="bodySm" weight="semibold" tone="ash" style={{ marginTop: space[4] }}>
-                      Invite shared. When a teammate at your school opens it and co-signs, this mark goes Verified.
-                    </Txt>
-                  )}
-                  {requested === 'video_proof' && (
-                    <Txt variant="bodySm" weight="semibold" tone="ash" style={{ marginTop: space[4] }}>
-                      Logged — but a teammate's co-sign is what turns a mark Verified for now.
-                    </Txt>
-                  )}
-                  {verifyError && (
-                    <Txt variant="bodySm" tone="ink" style={{ marginTop: space[3] }} accessibilityLiveRegion="polite">
-                      {verifyError}
-                    </Txt>
-                  )}
-                </View>
+              <View style={{ marginTop: space[4], gap: space[3] }}>
+                <PrimaryButton label="ASK A TEAMMATE TO CONFIRM" full onPress={askTeammate} />
+                <PrimaryButton label="UPLOAD VIDEO PROOF" variant="ghost" full onPress={uploadVideoProof} />
+                <PrimaryButton
+                  label="ASK A COACH · COMING LATER"
+                  variant="ghost"
+                  full
+                  disabled
+                  onPress={() => undefined}
+                />
+                <PrimaryButton
+                  label="EXTERNAL SOURCE · COMING LATER"
+                  variant="ghost"
+                  full
+                  disabled
+                  onPress={() => undefined}
+                />
               </View>
-            )}
 
-            {saving && (
-              <View style={{ marginTop: space[5], alignItems: 'center' }}>
-                <ActivityIndicator color={colors.ink} />
-              </View>
-            )}
+              {requested === 'peer_cosign' && (
+                <Txt variant="bodySm" weight="semibold" tone="ash" style={{ marginTop: space[4] }}>
+                  Invite shared. When a teammate at your school opens it and co-signs, this mark goes Verified.
+                </Txt>
+              )}
+              {requested === 'video_proof' && (
+                <Txt variant="bodySm" weight="semibold" tone="ash" style={{ marginTop: space[4] }}>
+                  Logged — but a teammate's co-sign is what turns a mark Verified for now.
+                </Txt>
+              )}
+              {verifyError && (
+                <Txt variant="bodySm" tone="ember" weight="semibold" style={{ marginTop: space[3] }} accessibilityLiveRegion="polite">
+                  {verifyError}
+                </Txt>
+              )}
+            </View>
+          </View>
+        )}
+
+        {saving && (
+          <View style={{ marginTop: space[5], alignItems: 'center' }}>
+            <ActivityIndicator color={colors.ash} />
           </View>
         )}
       </BottomSheetScrollView>

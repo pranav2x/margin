@@ -2,17 +2,20 @@ import { useMemo, useState } from 'react';
 import { View, ScrollView, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { Txt } from '../../components/primitives/Text';
 import { MicroLabel } from '../../components/primitives/MicroLabel';
 import { HairlineRule } from '../../components/primitives/HairlineRule';
 import { Avatar } from '../../components/primitives/Avatar';
+import { AppIcon } from '../../components/primitives/AppIcon';
+import { PrimaryButton } from '../../components/primitives/PrimaryButton';
+import { StatBlock, StatBlockRow } from '../../components/primitives/StatBlock';
 import { StatLine } from '../../components/composite/StatLine';
 import {
   SPORTS,
   SPORT_LABELS,
+  formatStatValue,
   useMyProfile,
   usePublicProfile,
   usePublicStats,
@@ -27,7 +30,6 @@ import {
   type ReportReason,
 } from '../../lib/hooks/useModeration';
 import { useFollowCounts, useIsFollowing, useToggleFollow } from '../../lib/hooks/useFollows';
-import { Score } from '../../components/motion/Score';
 import { useTheme, space, SCREEN_PADDING } from '../../theme';
 
 export default function PlayerProfile() {
@@ -48,6 +50,7 @@ export default function PlayerProfile() {
   const blockMut = useBlockProfile();
   const [showReport, setShowReport] = useState(false);
   const [reported, setReported] = useState(false);
+  const [showMore, setShowMore] = useState(false);
 
   const isFollowingQ = useIsFollowing(isSelf ? undefined : id);
   const followCountsQ = useFollowCounts(id);
@@ -73,6 +76,7 @@ export default function PlayerProfile() {
       await reportMut.mutateAsync({ targetProfileId: id, reason });
       setReported(true);
       setShowReport(false);
+      setShowMore(false);
     } catch {
       // Best-effort; nothing destructive on failure.
     }
@@ -116,12 +120,29 @@ export default function PlayerProfile() {
       .map((s) => ({ sport: s as Sport, rows: map.get(s)! }));
   }, [stats]);
 
+  const headline = useMemo(() => {
+    const plausible = stats.filter((s) => s.is_plausible !== false);
+    plausible.sort(
+      (a, b) => Number(b.verified) - Number(a.verified) || a.metric.sort_order - b.metric.sort_order,
+    );
+    return plausible.slice(0, 1);
+  }, [stats]);
+  const top = headline[0];
+
+  const verifiedCount = useMemo(
+    () => stats.filter((s) => s.verified && s.is_plausible !== false).length,
+    [stats],
+  );
+  const totalCount = stats.length;
+
   const handle = profile?.handle ?? '';
   const sportLabel = profile?.primary_sport ? SPORT_LABELS[profile.primary_sport as Sport] ?? null : null;
   const metaLine = [profile?.school?.name, profile?.grad_year ? `CLASS OF ${profile.grad_year}` : null, sportLabel?.toUpperCase()]
     .filter(Boolean)
     .join(' · ');
 
+  // Top chrome row — close button on the left, More on the right (visible only
+  // for non-self profiles so block/report don't surface on your own card).
   const Header = (
     <View
       style={{
@@ -129,12 +150,29 @@ export default function PlayerProfile() {
         paddingHorizontal: SCREEN_PADDING,
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'flex-end',
+        justifyContent: 'space-between',
       }}
     >
-      <Pressable onPress={() => router.back()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
-        <X size={22} color={colors.ink} strokeWidth={2} />
+      <Pressable
+        onPress={() => router.back()}
+        hitSlop={12}
+        accessibilityRole="button"
+        accessibilityLabel="Close"
+        style={{ minHeight: 44, minWidth: 44, justifyContent: 'center' }}
+      >
+        <AppIcon name="X" size={22} tone="ink" />
       </Pressable>
+      {!isSelf && profile ? (
+        <Pressable
+          onPress={() => { Haptics.selectionAsync(); setShowMore((v) => !v); }}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="More options"
+          style={{ minHeight: 44, minWidth: 44, alignItems: 'flex-end', justifyContent: 'center' }}
+        >
+          <AppIcon name="MoreHorizontal" size={22} tone="ink" />
+        </Pressable>
+      ) : null}
     </View>
   );
 
@@ -162,6 +200,11 @@ export default function PlayerProfile() {
     );
   }
 
+  const headlineValue = top ? formatStatValue(top.value, top.metric.unit) : null;
+  const headlineLabel = top
+    ? `${top.metric.label.toUpperCase()}${top.metric.unit ? ` · ${top.metric.unit}` : ''}`
+    : null;
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top }}>
       {Header}
@@ -169,104 +212,177 @@ export default function PlayerProfile() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom + space[10] }}
       >
-        <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[5] }}>
-          <Avatar uri={profile.avatar_url ?? undefined} size={88} />
-          <Txt variant="display1" accessibilityRole="header" style={{ marginTop: space[5] }}>
+        {/* Masthead — mirrors the You tab. Avatar 96px, name display3 bold,
+            @handle in bodyLg ash semibold, meta in bodySm ash. Centered. */}
+        <View
+          style={{
+            paddingHorizontal: SCREEN_PADDING,
+            paddingTop: space[4],
+            alignItems: 'center',
+          }}
+        >
+          <Avatar uri={profile.avatar_url ?? undefined} size={96} />
+          <Txt
+            variant="display3"
+            weight="bold"
+            accessibilityRole="header"
+            style={{ marginTop: space[4], textAlign: 'center' }}
+          >
             {profile.display_name ?? `@${handle}`}
           </Txt>
-          <Txt variant="bodySm" tone="ash" weight="semibold" style={{ marginTop: space[1], fontVariant: ['tabular-nums'] }}>
+          <Txt
+            variant="bodyLg"
+            tone="ash"
+            weight="semibold"
+            style={{ marginTop: space[1], textAlign: 'center', fontVariant: ['tabular-nums'] }}
+          >
             @{handle}
           </Txt>
-          {metaLine.length > 0 && <MicroLabel style={{ marginTop: space[4] }}>{metaLine}</MicroLabel>}
+          {metaLine.length > 0 && (
+            <Txt
+              variant="bodySm"
+              tone="ash"
+              style={{ marginTop: space[2], textAlign: 'center' }}
+            >
+              {metaLine}
+            </Txt>
+          )}
 
-          <View style={{ marginTop: space[4], flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
-            <Score value={followers ?? ''} size="sm" tone="ash" />
-            <MicroLabel tone="ash">FOLLOWERS</MicroLabel>
-            <MicroLabel tone="ash" style={{ marginHorizontal: space[1] }}>·</MicroLabel>
-            <Score value={following ?? ''} size="sm" tone="ash" />
-            <MicroLabel tone="ash">FOLLOWING</MicroLabel>
-          </View>
-
+          {/* Follow / Following — filled ember when not following, ghost
+              once following so the orange retreats to confirmation, not state. */}
           {!isSelf && (
-            <View style={{ marginTop: space[5] }}>
-              <Pressable
+            <View style={{ marginTop: space[5], alignSelf: 'stretch', alignItems: 'center' }}>
+              <PrimaryButton
+                label={isFollowing ? 'Following' : 'Follow'}
+                variant={isFollowing ? 'ghost' : 'primary'}
                 onPress={onToggleFollow}
                 disabled={toggleFollowMut.isPending}
-                accessibilityRole="button"
                 accessibilityLabel={isFollowing ? 'Unfollow' : 'Follow'}
-                style={({ pressed }) => ({
-                  alignSelf: 'flex-start',
-                  backgroundColor: isFollowing ? 'transparent' : colors.ink,
-                  borderWidth: isFollowing ? 1 : 0,
-                  borderColor: colors.ink,
-                  paddingVertical: space[4],
-                  paddingHorizontal: space[6],
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  minHeight: 44,
-                  opacity: toggleFollowMut.isPending ? 0.4 : pressed ? 0.8 : 1,
-                })}
-              >
-                <Txt variant="label" style={{ color: isFollowing ? colors.ink : colors.paper, letterSpacing: 0.6 }}>
-                  {isFollowing ? 'FOLLOWING' : 'FOLLOW'}
-                </Txt>
-              </Pressable>
-
-              <View style={{ flexDirection: 'row', gap: space[6], marginTop: space[5] }}>
-                {reported ? (
-                  <MicroLabel tone="ink">REPORTED</MicroLabel>
-                ) : (
-                  <Pressable
-                    onPress={() => { Haptics.selectionAsync(); setShowReport((v) => !v); }}
-                    hitSlop={8}
-                    accessibilityRole="button"
-                    accessibilityLabel="Report this athlete"
-                    style={{ minHeight: 44, justifyContent: 'center' }}
-                  >
-                    <MicroLabel tone="ink">REPORT</MicroLabel>
-                  </Pressable>
-                )}
-                <Pressable
-                  onPress={confirmBlock}
-                  hitSlop={8}
-                  accessibilityRole="button"
-                  accessibilityLabel="Block this athlete"
-                  style={{ minHeight: 44, justifyContent: 'center' }}
-                >
-                  <MicroLabel tone="ink">BLOCK</MicroLabel>
-                </Pressable>
-              </View>
-
-              {showReport && !reported && (
-                <View style={{ marginTop: space[3] }}>
-                  <MicroLabel>WHY ARE YOU REPORTING?</MicroLabel>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2], marginTop: space[3] }}>
-                    {REPORT_REASONS.map((r) => (
-                      <Pressable
-                        key={r}
-                        onPress={() => submitReport(r)}
-                        accessibilityRole="button"
-                        style={{
-                          borderWidth: 1,
-                          borderColor: colors.ink,
-                          paddingHorizontal: space[3],
-                          paddingVertical: space[2],
-                          minHeight: 36,
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <Txt variant="bodySm">{REPORT_REASON_LABELS[r]}</Txt>
-                      </Pressable>
-                    ))}
-                  </View>
-                </View>
-              )}
+                style={{ minWidth: 140 }}
+              />
             </View>
           )}
         </View>
 
-        <HairlineRule style={{ marginTop: space[7] }} />
-        <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[6], paddingBottom: space[2] }}>
+        {/* Followers / Following — small StatBlock pair above the stat hero. */}
+        <View
+          style={{
+            paddingHorizontal: SCREEN_PADDING,
+            paddingTop: space[7],
+            flexDirection: 'row',
+            justifyContent: 'center',
+            gap: space[8],
+          }}
+        >
+          <StatBlock
+            value={followers ?? 0}
+            label="FOLLOWERS"
+            size="sm"
+            align="center"
+          />
+          <StatBlock
+            value={following ?? 0}
+            label="FOLLOWING"
+            size="sm"
+            align="center"
+          />
+        </View>
+
+        {/* Headline stat — the public-facing narrative number. Ember accent
+            (the one orange beat on the page besides the Follow CTA). */}
+        {headlineValue && headlineLabel ? (
+          <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8] }}>
+            <StatBlock
+              value={headlineValue}
+              label={headlineLabel}
+              size="xl"
+              tone="accent"
+              align="center"
+            />
+          </View>
+        ) : null}
+
+        {/* Stat hero row — verified · tracked. No streak on a public profile
+            (sensitive — only the viewer's own streak is shown on the You tab). */}
+        {totalCount > 0 ? (
+          <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[7] }}>
+            <StatBlockRow>
+              <StatBlock
+                value={verifiedCount}
+                label="VERIFIED"
+                align="center"
+                size="md"
+              />
+              <StatBlock
+                value={totalCount}
+                label="TRACKED"
+                align="center"
+                size="md"
+              />
+            </StatBlockRow>
+          </View>
+        ) : null}
+
+        {/* Report / Block — surfaced via the More icon in the header. We keep
+            the same reason flow that lived inline before. */}
+        {showMore && !isSelf && (
+          <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[6] }}>
+            <View style={{ flexDirection: 'row', gap: space[3] }}>
+              {reported ? (
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', minHeight: 44 }}>
+                  <MicroLabel tone="ink">REPORTED</MicroLabel>
+                </View>
+              ) : (
+                <PrimaryButton
+                  label="Report"
+                  variant="ghost"
+                  size="compact"
+                  full
+                  onPress={() => { Haptics.selectionAsync(); setShowReport((v) => !v); }}
+                  style={{ flex: 1 }}
+                />
+              )}
+              <PrimaryButton
+                label="Block"
+                variant="ghost"
+                size="compact"
+                full
+                onPress={confirmBlock}
+                style={{ flex: 1 }}
+              />
+            </View>
+
+            {showReport && !reported && (
+              <View style={{ marginTop: space[4] }}>
+                <MicroLabel>WHY ARE YOU REPORTING?</MicroLabel>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2], marginTop: space[3] }}>
+                  {REPORT_REASONS.map((r) => (
+                    <Pressable
+                      key={r}
+                      onPress={() => submitReport(r)}
+                      accessibilityRole="button"
+                      style={{
+                        borderWidth: 1,
+                        borderColor: colors.ink,
+                        borderRadius: 8,
+                        paddingHorizontal: space[3],
+                        paddingVertical: space[2],
+                        minHeight: 36,
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Txt variant="bodySm">{REPORT_REASON_LABELS[r]}</Txt>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Stat lines — grouped per sport. Hairlines do the partitioning,
+            MicroLabel sport headers do the labelling. No card chrome. */}
+        <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8] }}>
           <MicroLabel>STAT LINES</MicroLabel>
         </View>
 
@@ -277,21 +393,30 @@ export default function PlayerProfile() {
             </Txt>
           </View>
         ) : (
-          grouped.map((group) => (
-            <View key={group.sport}>
-              <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[5], paddingBottom: space[1] }}>
-                <Txt variant="display4">{SPORT_LABELS[group.sport]}</Txt>
-              </View>
-              <HairlineRule />
-              {group.rows.map((s, i) => (
-                <View key={s.id}>
-                  {/* Read-only profile: rows are not editable. */}
-                  <StatLine stat={s} onPress={() => undefined} />
-                  {i < group.rows.length - 1 && <HairlineRule />}
+          <View style={{ paddingTop: space[3] }}>
+            {grouped.map((group, gi) => (
+              <View key={group.sport}>
+                {gi > 0 && <HairlineRule style={{ marginTop: space[5] }} />}
+                <View
+                  style={{
+                    paddingHorizontal: SCREEN_PADDING,
+                    paddingTop: gi === 0 ? space[2] : space[5],
+                    paddingBottom: space[2],
+                  }}
+                >
+                  <MicroLabel>{SPORT_LABELS[group.sport].toUpperCase()}</MicroLabel>
                 </View>
-              ))}
-            </View>
-          ))
+                <HairlineRule />
+                {group.rows.map((s, i) => (
+                  <View key={s.id}>
+                    {/* Read-only profile: rows are not editable. */}
+                    <StatLine stat={s} onPress={() => undefined} />
+                    {i < group.rows.length - 1 && <HairlineRule />}
+                  </View>
+                ))}
+              </View>
+            ))}
+          </View>
         )}
       </ScrollView>
     </View>
