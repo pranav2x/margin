@@ -341,6 +341,39 @@ export type Database = {
         }
         Relationships: []
       }
+      stat_cosigns: {
+        Row: {
+          cosigner_id: string
+          created_at: string
+          stat_id: string
+        }
+        Insert: {
+          cosigner_id: string
+          created_at?: string
+          stat_id: string
+        }
+        Update: {
+          cosigner_id?: string
+          created_at?: string
+          stat_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stat_cosigns_cosigner_id_fkey"
+            columns: ["cosigner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stat_cosigns_stat_id_fkey"
+            columns: ["stat_id"]
+            isOneToOne: false
+            referencedRelation: "player_stats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       verification_requests: {
         Row: {
           created_at: string
@@ -381,6 +414,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cosign_stat: { Args: { p_stat_id: string }; Returns: undefined }
       leaderboard: {
         Args: {
           p_limit?: number
