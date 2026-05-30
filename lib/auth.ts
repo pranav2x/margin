@@ -3,33 +3,18 @@
  *
  *  - Email one-time code: pure API calls (signInWithOtp / verifyOtp). Works
  *    EVERYWHERE, including Expo Go — no native module and no OAuth redirect.
- *  - Google: expo-auth-session + expo-web-browser OAuth flow. Works in both
- *    Expo Go and development builds on iOS/Android.
+ *  - Google: native @react-native-google-signin/google-signin → idToken →
+ *    supabase.auth.signInWithIdToken. Dev/standalone build only.
  *  - Apple: native Apple Authentication module (dev/standalone build only).
  *  - Web: Supabase full-page browser-redirect OAuth.
  */
 
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
-import { sha256 } from 'js-sha256';
-import * as AuthSession from 'expo-auth-session';
-import * as WebBrowser from 'expo-web-browser';
 import { supabase } from './supabase';
 import * as AppleAuthentication from 'expo-apple-authentication';
 
-// Required by expo-auth-session on iOS to complete the auth session
-WebBrowser.maybeCompleteAuthSession();
-
 export const isExpoGo = Constants.appOwnership === 'expo';
-
-function generateRawNonce(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  for (let i = 0; i < 32; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
 
 // ── Email one-time code (works in Expo Go) ───────────────────
 
@@ -54,10 +39,8 @@ export async function verifyEmailOtp(email: string, token: string) {
   return data;
 }
 
-// ── Google (native dev build via expo-auth-session) ──────────
+// ── Google (native dev/standalone build) ─────────────────────
 
-// @react-native-google-signin/google-signin is kept here in case it is
-// referenced elsewhere, but the main flow no longer uses it.
 let _googleSignin: typeof import('@react-native-google-signin/google-signin').GoogleSignin | null =
   null;
 
@@ -78,50 +61,31 @@ export async function signInWithGoogle() {
     return signInWithGoogleBrowserRedirect();
   }
 
-  // Generate nonce — we control both sides so Supabase verification succeeds.
-  const rawNonce = generateRawNonce();
-  const hashedNonce = sha256(rawNonce);
+  if (isExpoGo) {
+    throw new Error('Google sign-in requires a dev build. Use email sign-in in Expo Go.');
+  }
 
-  // Build the Google OAuth URL via Supabase (handles client_id, redirect, etc.)
-  const redirectUri = AuthSession.makeRedirectUri(
-    isExpoGo ? {} : { scheme: 'margin' }
-  );
+  const GoogleSignin = getGoogleSignin();
+  await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
-  console.log('[REDIRECT URI]', redirectUri);
+  const result: any = await GoogleSignin.signIn();
 
-  const { data: oauthData, error: oauthError } = await supabase.auth.signInWithOAuth({
+  // v13+ shape: { type: 'success' | 'cancelled', data?: { idToken, user, ... } }
+  // Older shape: { idToken, user, ... } returned directly.
+  if (result?.type === 'cancelled') return null;
+  const idToken: string | null | undefined = result?.data?.idToken ?? result?.idToken;
+
+  if (!idToken) {
+    throw new Error('Google sign-in failed — no ID token returned.');
+  }
+
+  const { data, error } = await supabase.auth.signInWithIdToken({
     provider: 'google',
-    options: {
-      redirectTo: redirectUri,
-      skipBrowserRedirect: true,
-      queryParams: {
-        nonce: hashedNonce,
-      },
-    },
+    token: idToken,
   });
 
-  console.log('[OAUTH URL]', oauthData?.url);
-
-  if (oauthError || !oauthData?.url) {
-    throw oauthError ?? new Error('Failed to get Google OAuth URL');
-  }
-
-  // openAuthSessionAsync watches for the redirect back to redirectUri, closes the
-  // in-app browser, and hands us the callback URL. This single path works for both
-  // the exp:// redirect (Expo Go) and the margin:// redirect (dev build) — no need
-  // to branch on isExpoGo here.
-  const result = await WebBrowser.openAuthSessionAsync(oauthData.url, redirectUri);
-
-  console.log('[AUTH RESULT]', JSON.stringify(result));
-
-  if (result.type === 'success' && result.url) {
-    const { data, error } = await supabase.auth.exchangeCodeForSession(result.url);
-    if (error) throw error;
-    return data;
-  }
-
-  // User dismissed the browser or the flow did not complete.
-  return null;
+  if (error) throw error;
+  return data;
 }
 
 // Real web platform (expo start --web): full-page redirect OAuth via Supabase.
