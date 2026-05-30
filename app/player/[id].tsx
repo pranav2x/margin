@@ -26,6 +26,8 @@ import {
   useReportProfile,
   type ReportReason,
 } from '../../lib/hooks/useModeration';
+import { useFollowCounts, useIsFollowing, useToggleFollow } from '../../lib/hooks/useFollows';
+import { Score } from '../../components/motion/Score';
 import { useTheme, space, SCREEN_PADDING } from '../../theme';
 
 export default function PlayerProfile() {
@@ -46,6 +48,23 @@ export default function PlayerProfile() {
   const blockMut = useBlockProfile();
   const [showReport, setShowReport] = useState(false);
   const [reported, setReported] = useState(false);
+
+  const isFollowingQ = useIsFollowing(isSelf ? undefined : id);
+  const followCountsQ = useFollowCounts(id);
+  const toggleFollowMut = useToggleFollow(id);
+  const isFollowing = !!isFollowingQ.data;
+  const followers = followCountsQ.data?.followers ?? null;
+  const following = followCountsQ.data?.following ?? null;
+
+  const onToggleFollow = async () => {
+    if (!id || isSelf) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      await toggleFollowMut.mutateAsync(isFollowing);
+    } catch {
+      // Best-effort; query invalidation keeps state honest.
+    }
+  };
 
   const submitReport = async (reason: ReportReason) => {
     if (!id) return;
@@ -160,9 +179,40 @@ export default function PlayerProfile() {
           </Txt>
           {metaLine.length > 0 && <MicroLabel style={{ marginTop: space[4] }}>{metaLine}</MicroLabel>}
 
+          <View style={{ marginTop: space[4], flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
+            <Score value={followers ?? ''} size="sm" tone="ash" />
+            <MicroLabel tone="ash">FOLLOWERS</MicroLabel>
+            <MicroLabel tone="ash" style={{ marginHorizontal: space[1] }}>·</MicroLabel>
+            <Score value={following ?? ''} size="sm" tone="ash" />
+            <MicroLabel tone="ash">FOLLOWING</MicroLabel>
+          </View>
+
           {!isSelf && (
             <View style={{ marginTop: space[5] }}>
-              <View style={{ flexDirection: 'row', gap: space[6] }}>
+              <Pressable
+                onPress={onToggleFollow}
+                disabled={toggleFollowMut.isPending}
+                accessibilityRole="button"
+                accessibilityLabel={isFollowing ? 'Unfollow' : 'Follow'}
+                style={({ pressed }) => ({
+                  alignSelf: 'flex-start',
+                  backgroundColor: isFollowing ? 'transparent' : colors.ink,
+                  borderWidth: isFollowing ? 1 : 0,
+                  borderColor: colors.ink,
+                  paddingVertical: space[4],
+                  paddingHorizontal: space[6],
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minHeight: 44,
+                  opacity: toggleFollowMut.isPending ? 0.4 : pressed ? 0.8 : 1,
+                })}
+              >
+                <Txt variant="label" style={{ color: isFollowing ? colors.ink : colors.paper, letterSpacing: 0.6 }}>
+                  {isFollowing ? 'FOLLOWING' : 'FOLLOW'}
+                </Txt>
+              </Pressable>
+
+              <View style={{ flexDirection: 'row', gap: space[6], marginTop: space[5] }}>
                 {reported ? (
                   <MicroLabel tone="ink">REPORTED</MicroLabel>
                 ) : (
