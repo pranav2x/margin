@@ -107,7 +107,7 @@ export default function AgeGate() {
       >
         <MicroLabel>AGE REQUIREMENT</MicroLabel>
         <Txt variant="display2" style={{ marginTop: space[4], fontSize: 44, lineHeight: 48 }}>
-          MARGIN is for ages{' '}
+          Elevate is for ages{' '}
           <Txt variant="display2" italic style={{ fontFamily: 'InstrumentSerifItalic', fontSize: 44, lineHeight: 48 }}>
             13 and up.
           </Txt>
@@ -140,7 +140,7 @@ export default function AgeGate() {
         </Txt>
       </Txt>
       <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[4], lineHeight: 26 }}>
-        MARGIN is built for athletes ages 13 and up.
+        Elevate is built for athletes ages 13 and up.
       </Txt>
 
       <View style={{ marginTop: space[8] }}>

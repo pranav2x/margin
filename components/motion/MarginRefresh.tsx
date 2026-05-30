@@ -20,7 +20,7 @@ interface Props {
 }
 
 /**
- * The MARGIN word — stretches downward as the user pulls, italicizes
+ * The Elevate word — stretches downward as the user pulls, italicizes
  * at the threshold, and oscillates gently while refreshing.
  */
 export function MarginRefresh({ pull, refreshing, threshold = 80 }: Props) {
@@ -90,7 +90,7 @@ export function MarginRefresh({ pull, refreshing, threshold = 80 }: Props) {
       <Animated.View style={animatedStyle}>
         <View>
           <Animated.Text allowFontScaling={false} style={[baseStyle, uprightStyle]}>
-            MARGIN
+            Elevate
           </Animated.Text>
           <Animated.Text
             allowFontScaling={false}
@@ -100,7 +100,7 @@ export function MarginRefresh({ pull, refreshing, threshold = 80 }: Props) {
               { position: 'absolute', top: 0, left: 0 },
             ]}
           >
-            MARGIN
+            Elevate
           </Animated.Text>
         </View>
       </Animated.View>

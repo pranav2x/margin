@@ -106,7 +106,7 @@ export default function Eula() {
         contentContainerStyle={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[6] }}
       >
         <Txt variant="bodyLg" tone="ash" style={{ lineHeight: 26 }}>
-          MARGIN is a community for student athletes to share their stats and stack up
+          Elevate is a community for student athletes to share their stats and stack up
           against each other. By continuing, you agree to our Terms of Use and Community
           Rules.
         </Txt>
@@ -116,7 +116,7 @@ export default function Eula() {
           abusive behavior. Accounts that break these rules can be removed.
         </Txt>
         <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[5], lineHeight: 26 }}>
-          MARGIN is for stats and friendly competition only. It is not a betting, wagering,
+          Elevate is for stats and friendly competition only. It is not a betting, wagering,
           or prize platform, and involves no money.
         </Txt>
 

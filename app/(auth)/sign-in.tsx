@@ -66,7 +66,7 @@ export default function SignIn() {
             style={{ fontSize: 76, lineHeight: 80 }}
             accessibilityRole="header"
           >
-            MARGIN
+            Elevate
           </Txt>
           <Txt
             variant="display4"

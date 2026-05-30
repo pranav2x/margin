@@ -64,7 +64,7 @@ export default function PlayerProfile() {
     const who = profile?.handle ? `@${profile.handle}` : 'this athlete';
     Alert.alert(
       `Block ${who}?`,
-      "You won't see each other on MARGIN. You can't undo this here.",
+      "You won't see each other on Elevate. You can't undo this here.",
       [
         { text: 'Cancel', style: 'cancel' },
         {

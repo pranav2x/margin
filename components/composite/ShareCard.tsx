@@ -42,7 +42,7 @@ export const ShareCard = forwardRef<View, Props>(function ShareCard(
       }}
     >
       <Txt variant="display3" style={{ fontSize: 34, lineHeight: 36, letterSpacing: 1 }}>
-        MARGIN
+        Elevate
       </Txt>
       <MicroLabel style={{ marginTop: space[2] }}>
         @{handle}{meta ? `  ·  ${meta}` : ''}
@@ -72,7 +72,7 @@ export const ShareCard = forwardRef<View, Props>(function ShareCard(
       )}
 
       <HairlineRule style={{ marginVertical: space[5] }} />
-      <MicroLabel>THE MARGIN IS THE STORY</MicroLabel>
+      <MicroLabel>YOUR GAME, BY THE NUMBERS</MicroLabel>
     </View>
   );
 });

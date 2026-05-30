@@ -11,7 +11,7 @@ import { useTheme, space, SCREEN_PADDING } from '../../theme';
 const SECTIONS: { heading: string; body: string }[] = [
   {
     heading: 'Be real',
-    body: 'Report your own stats honestly. MARGIN is built on trust between athletes — faking numbers ruins the board for everyone.',
+    body: 'Report your own stats honestly. Elevate is built on trust between athletes — faking numbers ruins the board for everyone.',
   },
   {
     heading: 'No objectionable content',
@@ -27,7 +27,7 @@ const SECTIONS: { heading: string; body: string }[] = [
   },
   {
     heading: 'No money, ever',
-    body: 'MARGIN is for stats and friendly competition only. There is no betting, wagering, prizes, or money involved anywhere in the app.',
+    body: 'Elevate is for stats and friendly competition only. There is no betting, wagering, prizes, or money involved anywhere in the app.',
   },
 ];
 
@@ -66,7 +66,7 @@ export default function Rules() {
           </Txt>
         </Txt>
         <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[4], lineHeight: 26 }}>
-          Short version of how we keep MARGIN worth being on.
+          Short version of how we keep Elevate worth being on.
         </Txt>
 
         {SECTIONS.map((s, i) => (

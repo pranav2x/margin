@@ -35,7 +35,7 @@ export const BattleShareCard = forwardRef<View, Props>(function BattleShareCard(
       }}
     >
       <Txt variant="display3" style={{ fontSize: 34, lineHeight: 36, letterSpacing: 1 }}>
-        MARGIN
+        Elevate
       </Txt>
       <MicroLabel style={{ marginTop: space[2] }}>
         HEAD TO HEAD{sportLabel ? `  ·  ${sportLabel.toUpperCase()}` : ''}

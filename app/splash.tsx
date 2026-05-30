@@ -11,7 +11,7 @@ import Animated, {
 import { Txt } from '../components/primitives/Text';
 import { useTheme, space, fonts } from '../theme';
 
-const LETTERS = ['M', 'A', 'R', 'G', 'I', 'N'];
+const LETTERS = ['E', 'L', 'E', 'V', 'A', 'T', 'E'];
 
 function Letter({ char, delay }: { char: string; delay: number }) {
   const t = useSharedValue(0);
@@ -80,7 +80,7 @@ export default function Splash() {
           tone="ash"
           style={{ letterSpacing: 2.2 }}
         >
-          A NEW WAY TO READ SPORTS
+          YOUR GAME, BY THE NUMBERS
         </Txt>
       </Animated.View>
     </View>

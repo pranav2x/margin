@@ -1,10 +1,11 @@
 {
   "expo": {
-    "name": "MARGIN",
-    "slug": "margin",
+    "name": "Elevate",
+    "slug": "elevate",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
+    // TODO(brand): coordinate scheme rename with Supabase + Google OAuth
     "scheme": "margin",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
