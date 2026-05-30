@@ -124,6 +124,7 @@ export default function YouScreen() {
     value: formatStatValue(s.value, s.metric.unit),
     unit: s.metric.unit,
     verified: s.verified,
+    method: s.verification_method,
   }));
 
   const top = headline[0];

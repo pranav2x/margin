@@ -12,6 +12,8 @@ export interface HeadlineStat {
   value: string;
   unit: string | null;
   verified: boolean;
+  /** Optional verification method — promotes the badge to the event tier. */
+  method?: string | null;
 }
 
 interface Props {
@@ -65,7 +67,7 @@ export const ShareCard = forwardRef<View, Props>(function ShareCard(
               <Score value={s.value} size="lg" />
             </View>
             <View style={{ marginTop: space[3] }}>
-              <VerifiedMark verified={s.verified} />
+              <VerifiedMark verified={s.verified} method={s.method ?? null} />
             </View>
           </View>
         ))

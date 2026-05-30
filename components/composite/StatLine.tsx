@@ -2,36 +2,29 @@ import { View, Pressable } from 'react-native';
 import { Txt } from '../primitives/Text';
 import { MicroLabel } from '../primitives/MicroLabel';
 import { Score } from '../motion/Score';
+import { VerifiedBadge, tierOf } from '../primitives/VerifiedBadge';
 import { useTheme, space, SCREEN_PADDING } from '../../theme';
 import { formatStatValue, type PlayerStat } from '../../lib/hooks/usePlayerProfile';
 
-// Verified is a small filled-ink pill; unverified is a hairline outline. No
-// color-coding — both verified and unverified read in ink/paper only.
-export function VerifiedMark({ verified, inverted }: { verified: boolean; inverted?: boolean }) {
-  const { colors } = useTheme();
-  const base = inverted ? colors.paper : colors.ink;
-  const onBase = inverted ? colors.ink : colors.paper;
+// Legacy 2-state mark — kept as a thin wrapper over VerifiedBadge so existing
+// call sites stay working while the codebase migrates onto the full 3-tier
+// vocabulary (unverified / video-proof / event-timed). `method`, when passed,
+// promotes the badge to the event tier where appropriate.
+export function VerifiedMark({
+  verified,
+  inverted,
+  method,
+}: {
+  verified: boolean;
+  inverted?: boolean;
+  method?: string | null;
+}) {
   return (
-    <View
-      accessible
-      accessibilityLabel={verified ? 'Verified' : 'Unverified'}
-      style={{
-        borderWidth: 1,
-        borderColor: base,
-        backgroundColor: verified ? base : 'transparent',
-        paddingHorizontal: space[2],
-        paddingVertical: 2,
-        borderRadius: 4,
-        alignSelf: 'flex-start',
-      }}
-    >
-      <Txt
-        variant="micro"
-        style={{ color: verified ? onBase : base }}
-      >
-        {verified ? 'Verified' : 'Unverified'}
-      </Txt>
-    </View>
+    <VerifiedBadge
+      tier={tierOf(verified, method)}
+      withLabel
+      inverted={inverted}
+    />
   );
 }
 
@@ -67,7 +60,7 @@ export function StatLine({ stat, onPress }: Props) {
       </View>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: space[3], gap: space[3] }}>
-        <VerifiedMark verified={stat.verified} />
+        <VerifiedMark verified={stat.verified} method={stat.verification_method} />
         {implausible ? (
           <Txt variant="bodySm" tone="ash" weight="semibold" style={{ flex: 1 }}>
             outside the expected range — verify to rank
