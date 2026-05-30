@@ -1,4 +1,5 @@
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { View, Pressable, Text, ActivityIndicator, Share, type TextStyle } from 'react-native';
 import {
   BottomSheetModal,
@@ -18,6 +19,7 @@ import { HairlineRule } from '../primitives/HairlineRule';
 import { PrimaryButton } from '../primitives/PrimaryButton';
 import { useTheme, space, SCREEN_PADDING, fonts } from '../../theme';
 import { supabase } from '../../lib/supabase';
+import { recordActivity } from '../../lib/hooks/useStreak';
 import {
   SPORTS,
   SPORT_LABELS,
@@ -53,6 +55,7 @@ export const StatEntrySheet = forwardRef<StatEntrySheetRef, Props>(function Stat
   ref,
 ) {
   const { colors } = useTheme();
+  const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   const modalRef = useRef<BottomSheetModal>(null);
 
@@ -146,7 +149,10 @@ export const StatEntrySheet = forwardRef<StatEntrySheetRef, Props>(function Stat
         if (insertError) throw insertError;
       }
 
-      // Only confirm and dismiss once the write actually succeeded.
+      // Only confirm and dismiss once the write actually succeeded. A saved
+      // stat is a core-loop action — advance the streak, fire-and-forget so a
+      // streak hiccup can never block the save.
+      void recordActivity(queryClient);
       onSaved();
       modalRef.current?.dismiss();
     } catch (e) {

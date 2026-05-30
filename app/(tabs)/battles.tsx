@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { View, ScrollView, Pressable, TextInput, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import * as Haptics from 'expo-haptics';
@@ -29,6 +30,7 @@ import {
   type Sport,
 } from '../../lib/hooks/usePlayerProfile';
 import { useTheme, space, SCREEN_PADDING, fonts } from '../../theme';
+import { recordActivity } from '../../lib/hooks/useStreak';
 
 type Winner = 'me' | 'opp' | 'tie';
 
@@ -116,6 +118,8 @@ export default function BattlesScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
+  const queryClient = useQueryClient();
+
   const meQ = useMyProfile();
   const me = meQ.data;
   const mySport = me?.primary_sport ?? null;
@@ -181,6 +185,9 @@ export default function BattlesScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       const uri = await captureRef(cardRef, { format: 'png', quality: 1 });
+      // Filing (sharing) a battle is a core-loop action — advance the streak,
+      // fire-and-forget so it counts even if the OS share sheet is dismissed.
+      void recordActivity(queryClient);
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share this battle' });
       }

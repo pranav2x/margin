@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../supabase';
+import { recordActivity } from './useStreak';
 import type { MetricRow } from './usePlayerProfile';
 
 // Mirrors the column list used by usePlayerProfile so the embedded metric shape
@@ -147,6 +148,8 @@ export function useCosignStat() {
       queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
       queryClient.invalidateQueries({ queryKey: ['public-stats'] });
       queryClient.invalidateQueries({ queryKey: ['my-stats'] });
+      // Co-signing a teammate is a core-loop action — advance the streak.
+      void recordActivity(queryClient);
     },
   });
 }
