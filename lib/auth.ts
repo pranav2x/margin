@@ -13,6 +13,7 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as AuthSession from 'expo-auth-session';
+import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { supabase } from './supabase';
 
@@ -49,7 +50,19 @@ export async function signInWithGoogle() {
     return null;
   }
 
-  const { data, error } = await supabase.auth.exchangeCodeForSession(result.url);
+  // exchangeCodeForSession wants the bare auth code, not the callback URL.
+  const { queryParams } = Linking.parse(result.url);
+  const callbackError = typeof queryParams?.error_description === 'string'
+    ? queryParams.error_description
+    : typeof queryParams?.error === 'string'
+      ? queryParams.error
+      : null;
+  if (callbackError) throw new Error(callbackError);
+
+  const code = typeof queryParams?.code === 'string' ? queryParams.code : null;
+  if (!code) return null;
+
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) throw error;
   return data;
 }
