@@ -5,15 +5,19 @@ import {
   Pressable,
   Dimensions,
   StyleSheet,
+  Alert,
   type ViewToken,
   type ListRenderItemInfo,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Sharing from 'expo-sharing';
+import * as Haptics from 'expo-haptics';
 import { Txt } from '../../components/primitives/Text';
 import { Avatar } from '../../components/primitives/Avatar';
 import { AppIcon } from '../../components/primitives/AppIcon';
+import { useCreateSheetStore } from '../../state/createSheet';
 // NOTE: clips screens are dark-by-default regardless of theme preference (videos
 // look better on black). We reach for `darkColors` directly so the chrome stays
 // stable when the user is in light mode. This is the documented one-off
@@ -243,6 +247,43 @@ function ClipSlide({ clip, active, bottomInset }: ClipSlideProps) {
   const [liked, setLiked] = useState(false);
   const [muted, setMuted] = useState(true);
   const [paused, setPaused] = useState(false);
+  const openStatEntry = useCreateSheetStore((s) => s.openStatEntry);
+
+  // Share-with-watermark hook. Wave 2.1 swaps this for a real ShareCard PNG
+  // capture (handle + first-frame poster + Elevate watermark). For now the
+  // OS share sheet receives the poster URL + a credit string so users can
+  // already push to TikTok/IG/Snap/iMessage from here.
+  const share = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(clip.posterUrl, {
+          dialogTitle: `@${clip.author.handle} on Elevate`,
+        });
+      }
+    } catch {
+      // Share unavailable — no-op.
+    }
+  };
+
+  // "Tag as proof" — wires the clip into a stat record as video-proof.
+  // Wave 2.3 will pass the clip id through so the stat is created with
+  // verification_method='video' and a clip_id back-reference. Until then the
+  // stat-entry sheet opens with no clip context.
+  const tagAsProof = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Alert.alert(
+      'Tag this clip as proof?',
+      'We’ll attach it to a stat you log — coaches and rivals will see the receipt.',
+      [
+        { text: 'Not now', style: 'cancel' },
+        {
+          text: 'Log a stat',
+          onPress: () => openStatEntry(),
+        },
+      ],
+    );
+  };
 
   // Local count so taps feel responsive. TODO(supabase): wire to optimistic
   // mutation that posts a like row + counter trigger update.
@@ -358,8 +399,7 @@ function ClipSlide({ clip, active, bottomInset }: ClipSlideProps) {
         <RailAction
           icon="Share2"
           label={formatCount(clip.shares)}
-          // TODO(share): wire to Share.share / deep link to /clips/[id]
-          onPress={() => undefined}
+          onPress={share}
           accessibilityLabel="Share"
         />
         <RailAction
@@ -368,6 +408,15 @@ function ClipSlide({ clip, active, bottomInset }: ClipSlideProps) {
           // TODO(supabase): wire to saved_clips toggle
           onPress={() => undefined}
           accessibilityLabel="Save"
+        />
+        {/* TAG AS PROOF — the verification-pipeline affordance. Tapping
+            opens the stat-entry sheet so the clip becomes a video-proof
+            receipt on a stat record (Wave 2.3 finishes the wire-up). */}
+        <RailAction
+          icon="Check"
+          label="Tag"
+          onPress={tagAsProof}
+          accessibilityLabel="Tag clip as video proof for a stat"
         />
         <RailAction
           icon={muted ? 'Pause' : 'Play'}
@@ -426,7 +475,7 @@ function ClipSlide({ clip, active, bottomInset }: ClipSlideProps) {
 }
 
 interface RailActionProps {
-  icon: 'Heart' | 'MessageCircle' | 'Share2' | 'Bookmark' | 'Play' | 'Pause';
+  icon: 'Heart' | 'MessageCircle' | 'Share2' | 'Bookmark' | 'Play' | 'Pause' | 'Check';
   label: string;
   active?: boolean;
   onPress: () => void;
