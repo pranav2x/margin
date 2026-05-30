@@ -20,7 +20,7 @@ const ease = Easing.bezier(0.22, 1, 0.36, 1);
 export function PressableScale({
   children,
   style,
-  scale = 0.985,
+  scale = 0.97,
   haptic = 'light',
   onPress,
   ...rest

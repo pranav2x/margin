@@ -1,129 +1,229 @@
-import { useEffect } from 'react';
-import { View, Pressable, Platform, StyleSheet } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { View, Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
   withTiming,
   useAnimatedStyle,
   Easing,
 } from 'react-native-reanimated';
-import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  BottomSheetModal,
+  BottomSheetBackdrop,
+  BottomSheetView,
+  type BottomSheetBackdropProps,
+} from '@gorhom/bottom-sheet';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { Trophy, Swords, User, type LucideIcon } from 'lucide-react-native';
-import { fonts, useTheme, space } from '../../theme';
+
+import { useTheme, space } from '../../theme';
+import { AppIcon, type IconName } from '../primitives/AppIcon';
+import { MicroLabel } from '../primitives/MicroLabel';
+import { Txt } from '../primitives/Text';
 import { HairlineRule } from '../primitives/HairlineRule';
+import { useCreateSheetStore } from '../../state/createSheet';
 
+// 4 visible tabs (the [+] center button is rendered between index #1 and #2).
 const LABELS: Record<string, string> = {
-  index: 'boards',
-  battles: 'battles',
-  you: 'you',
+  index: 'BOARDS',
+  battles: 'BATTLES',
+  clips: 'CLIPS',
+  you: 'YOU',
 };
 
-// One calm hairline icon per tab, above the brand wordmark.
-const ICONS: Record<string, LucideIcon> = {
-  index: Trophy,
-  battles: Swords,
-  you: User,
+const ICONS: Record<string, IconName> = {
+  index: 'Trophy',
+  battles: 'Swords',
+  clips: 'Video',
+  you: 'User',
 };
+
+const EASING = Easing.bezier(0.22, 1, 0.36, 1);
 
 interface ItemProps {
-  label: string;
   name: string;
+  label: string;
+  icon: IconName;
   active: boolean;
   onPress: () => void;
-  color: string;
-  activeColor: string;
 }
 
-function TabItem({ label, name, active, onPress, color, activeColor }: ItemProps) {
-  const Icon = ICONS[name];
+function TabItem({ name, label, icon, active, onPress }: ItemProps) {
+  const { colors } = useTheme();
   const progress = useSharedValue(active ? 1 : 0);
 
   useEffect(() => {
-    progress.value = withTiming(active ? 1 : 0, {
-      duration: 220,
-      easing: Easing.bezier(0.22, 1, 0.36, 1),
-    });
+    progress.value = withTiming(active ? 1 : 0, { duration: 100, easing: EASING });
   }, [active, progress]);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: active ? 1 : 1,
-  }));
-
-  const activeStyle = useAnimatedStyle(() => ({
-    opacity: progress.value,
-    transform: [{ scale: 0.96 + progress.value * 0.04 }],
-  }));
-
-  const inactiveStyle = useAnimatedStyle(() => ({
-    opacity: 1 - progress.value,
+  const tone = active ? 'ember' : 'ash';
+  const containerStyle = useAnimatedStyle(() => ({
+    opacity: 0.7 + progress.value * 0.3,
   }));
 
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${label} tab`}
+      accessibilityState={{ selected: active }}
       style={{
         flex: 1,
         alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: space[3],
+        justifyContent: 'flex-start',
+        paddingTop: space[2],
         minHeight: 56,
       }}
     >
-      {/* Hairline icon above the wordmark. Fixed box + two crossfading copies
-          (ink active / ash inactive) so the active state never shifts layout. */}
-      {Icon ? (
-        <View style={{ width: 24, height: 24, marginBottom: space[1], alignItems: 'center', justifyContent: 'center' }}>
-          <Animated.View style={[{ position: 'absolute' }, activeStyle]}>
-            <Icon size={22} color={activeColor} strokeWidth={1.5} />
-          </Animated.View>
-          <Animated.View style={[{ position: 'absolute' }, inactiveStyle]}>
-            <Icon size={22} color={color} strokeWidth={1.5} />
-          </Animated.View>
-        </View>
-      ) : null}
-      <Animated.View style={[{ position: 'relative', height: 26, justifyContent: 'center', alignItems: 'center' }, animatedStyle]}>
-        <Animated.Text
-          allowFontScaling={false}
-          style={[
-            {
-              fontFamily: fonts.serifItalic,
-              fontSize: 19,
-              lineHeight: 26,
-              color: activeColor,
-              position: 'absolute',
-              letterSpacing: 0.2,
-            },
-            activeStyle,
-          ]}
+      <Animated.View style={[{ alignItems: 'center', gap: 2 }, containerStyle]}>
+        <AppIcon name={icon} size={26} tone={tone} filled={active} />
+        <MicroLabel
+          tone={active ? 'ink' : 'ash'}
+          style={{
+            color: active ? colors.ember : colors.ash,
+            marginTop: 2,
+          }}
         >
           {label}
-        </Animated.Text>
-        <Animated.Text
-          allowFontScaling={false}
-          style={[
-            {
-              fontFamily: fonts.serif,
-              fontSize: 15,
-              lineHeight: 26,
-              color,
-              position: 'absolute',
-              letterSpacing: 0.2,
-            },
-            inactiveStyle,
-          ]}
-        >
-          {label}
-        </Animated.Text>
+        </MicroLabel>
       </Animated.View>
     </Pressable>
   );
 }
 
+interface CreateButtonProps {
+  onPress: () => void;
+}
+
+function CreateButton({ onPress }: CreateButtonProps) {
+  const { colors } = useTheme();
+  const pressed = useSharedValue(0);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 - pressed.value * 0.06 }],
+    backgroundColor: pressed.value > 0.5 ? colors.emberPressed : colors.ember,
+  }));
+
+  return (
+    <Pressable
+      onPressIn={() => {
+        pressed.value = withTiming(1, { duration: 90, easing: EASING });
+      }}
+      onPressOut={() => {
+        pressed.value = withTiming(0, { duration: 140, easing: EASING });
+      }}
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        onPress();
+      }}
+      accessibilityRole="button"
+      accessibilityLabel="Create"
+      style={{
+        width: 64,
+        height: 64,
+        marginHorizontal: space[1],
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Animated.View
+        style={[
+          {
+            width: 64,
+            height: 64,
+            borderRadius: 32,
+            alignItems: 'center',
+            justifyContent: 'center',
+            shadowColor: colors.void,
+            shadowOpacity: 0.15,
+            shadowRadius: 6,
+            shadowOffset: { width: 0, height: 2 },
+            elevation: 6,
+          },
+          animatedStyle,
+        ]}
+      >
+        <AppIcon name="Plus" size={32} tone="paper" />
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+interface ActionProps {
+  icon: IconName;
+  label: string;
+  onPress: () => void;
+}
+
+function ActionRow({ icon, label, onPress }: ActionProps) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space[4],
+        paddingVertical: space[4],
+        paddingHorizontal: space[5],
+        backgroundColor: pressed ? colors.surface : 'transparent',
+      })}
+    >
+      <View
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: colors.surface,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <AppIcon name={icon} size={22} tone="ink" />
+      </View>
+      <Txt variant="bodyLg" weight="semibold">
+        {label}
+      </Txt>
+    </Pressable>
+  );
+}
+
 export function BottomTabBar({ state, navigation }: BottomTabBarProps) {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const sheetRef = useRef<BottomSheetModal>(null);
+  const openStatEntry = useCreateSheetStore((s) => s.openStatEntry);
+
+  const renderBackdrop = useCallback(
+    (props: BottomSheetBackdropProps) => (
+      <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} opacity={0.4} />
+    ),
+    [],
+  );
+
+  const snapPoints = useMemo(() => ['38%'], []);
+
+  // Build the visible tab list (Boards, Battles, Clips, You) in the registered
+  // order from the navigator. The [+] button is rendered between #1 and #2.
+  const visibleRoutes = state.routes.filter((r) => r.name in LABELS);
+
+  const handleTabPress = (routeName: string, routeKey: string, isFocused: boolean) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const event = navigation.emit({
+      type: 'tabPress',
+      target: routeKey,
+      canPreventDefault: true,
+    });
+    if (!isFocused && !event.defaultPrevented) {
+      (navigation.navigate as (name: string) => void)(routeName);
+    }
+  };
+
+  const openCreateSheet = () => sheetRef.current?.present();
+  const closeCreateSheet = () => sheetRef.current?.dismiss();
 
   return (
     <View
@@ -134,55 +234,110 @@ export function BottomTabBar({ state, navigation }: BottomTabBarProps) {
         bottom: 0,
       }}
     >
-      <HairlineRule />
-      <BlurView
-        intensity={Platform.OS === 'ios' ? 30 : 0}
-        tint={isDark ? 'dark' : 'light'}
-        experimentalBlurMethod="dimezisBlurView"
+      <View
         style={{
-          backgroundColor: Platform.OS === 'ios' ? 'transparent' : colors.paper,
+          backgroundColor: colors.paper,
+          borderTopWidth: 1,
+          borderTopColor: colors.fog,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : space[3],
         }}
       >
         <View
           style={{
-            backgroundColor: colors.paper,
-            opacity: Platform.OS === 'ios' ? 0.9 : 1,
-            ...StyleSheet.absoluteFillObject,
-          }}
-        />
-        <View
-          style={{
             flexDirection: 'row',
-            paddingBottom: insets.bottom > 0 ? insets.bottom : space[3],
+            alignItems: 'center',
+            paddingHorizontal: space[1],
           }}
         >
-          {state.routes.map((route, index) => {
-            const isFocused = state.index === index;
-            const onPress = () => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-              if (!isFocused && !event.defaultPrevented) {
-                (navigation.navigate as (name: string, params?: unknown) => void)(
-                route.name,
-                route.params,
-              );
-              }
-            };
-            const label = LABELS[route.name] ?? route.name;
+          {visibleRoutes.slice(0, 2).map((route) => {
+            const isFocused = state.routes[state.index]?.name === route.name;
             return (
               <TabItem
                 key={route.key}
-                label={label}
                 name={route.name}
+                label={LABELS[route.name]}
+                icon={ICONS[route.name]}
                 active={isFocused}
-                onPress={onPress}
-                color={colors.ash}
-                activeColor={colors.ink}
+                onPress={() => handleTabPress(route.name, route.key, isFocused)}
+              />
+            );
+          })}
+
+          <CreateButton onPress={openCreateSheet} />
+
+          {visibleRoutes.slice(2).map((route) => {
+            const isFocused = state.routes[state.index]?.name === route.name;
+            return (
+              <TabItem
+                key={route.key}
+                name={route.name}
+                label={LABELS[route.name]}
+                icon={ICONS[route.name]}
+                active={isFocused}
+                onPress={() => handleTabPress(route.name, route.key, isFocused)}
               />
             );
           })}
         </View>
-      </BlurView>
+      </View>
+
+      <BottomSheetModal
+        ref={sheetRef}
+        snapPoints={snapPoints}
+        enablePanDownToClose
+        backdropComponent={renderBackdrop}
+        backgroundStyle={{ backgroundColor: colors.paper }}
+        handleIndicatorStyle={{ backgroundColor: colors.ash }}
+      >
+        <BottomSheetView
+          style={{
+            paddingBottom: insets.bottom + space[4],
+          }}
+        >
+          <View style={{ paddingHorizontal: space[5], paddingTop: space[2], paddingBottom: space[3] }}>
+            <MicroLabel>CREATE</MicroLabel>
+          </View>
+          <HairlineRule />
+          {/*
+            Log stat dispatches into the existing StatEntrySheet via a tiny
+            zustand pub/sub (`state/createSheet.ts`). Screens that mount a
+            StatEntrySheet (currently /you) register a handler on mount.
+          */}
+          <ActionRow
+            icon="Activity"
+            label="Log stat"
+            onPress={() => {
+              closeCreateSheet();
+              setTimeout(() => openStatEntry(), 180);
+            }}
+          />
+          <ActionRow
+            icon="MessageSquare"
+            label="Post take"
+            onPress={() => {
+              closeCreateSheet();
+              setTimeout(() => router.push('/takes/new'), 180);
+            }}
+          />
+          <ActionRow
+            icon="Target"
+            label="Make call"
+            onPress={() => {
+              closeCreateSheet();
+              setTimeout(() => router.push('/calls/new'), 180);
+            }}
+          />
+          <ActionRow
+            icon="Video"
+            label="Add clip"
+            onPress={() => {
+              closeCreateSheet();
+              setTimeout(() => router.push('/clips/new'), 180);
+            }}
+          />
+        </BottomSheetView>
+      </BottomSheetModal>
     </View>
   );
 }
+

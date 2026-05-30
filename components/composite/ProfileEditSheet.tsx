@@ -207,7 +207,7 @@ export const ProfileEditSheet = forwardRef<ProfileEditSheetRef, Props>(function 
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="url"
-            style={{ fontFamily: fonts.body, fontSize: 16, lineHeight: 22, color: colors.ink, paddingVertical: space[2] }}
+            style={{ fontFamily: fonts.medium, fontSize: 16, lineHeight: 22, color: colors.ink, paddingVertical: space[2] }}
           />
           <HairlineRule />
         </View>
@@ -221,7 +221,7 @@ export const ProfileEditSheet = forwardRef<ProfileEditSheetRef, Props>(function 
             placeholder="Your name"
             placeholderTextColor={colors.ash}
             autoCapitalize="words"
-            style={{ fontFamily: fonts.serif, fontSize: 24, lineHeight: 30, color: colors.ink, paddingVertical: space[2] }}
+            style={{ fontFamily: fonts.bold, fontSize: 24, lineHeight: 28, color: colors.ink, paddingVertical: space[2] }}
           />
           <HairlineRule />
         </View>
@@ -243,6 +243,7 @@ export const ProfileEditSheet = forwardRef<ProfileEditSheetRef, Props>(function 
                     paddingHorizontal: space[4],
                     borderWidth: 1,
                     borderColor: colors.ink,
+                    borderRadius: 8,
                     backgroundColor: active ? colors.ink : 'transparent',
                     minHeight: 44,
                     justifyContent: 'center',
@@ -250,7 +251,7 @@ export const ProfileEditSheet = forwardRef<ProfileEditSheetRef, Props>(function 
                 >
                   <Text
                     allowFontScaling={false}
-                    style={{ fontFamily: fonts.bodyMedium, fontSize: 12, letterSpacing: 0.6, color: active ? colors.paper : colors.ink }}
+                    style={{ fontFamily: fonts.semibold, fontSize: 12, letterSpacing: 0.6, color: active ? colors.paper : colors.ink }}
                   >
                     {SPORT_LABELS[s]}
                   </Text>
@@ -299,7 +300,7 @@ export const ProfileEditSheet = forwardRef<ProfileEditSheetRef, Props>(function 
                   placeholder="Search schools"
                   placeholderTextColor={colors.ash}
                   autoCorrect={false}
-                  style={{ fontFamily: fonts.serif, fontSize: 20, lineHeight: 26, color: colors.ink, paddingVertical: space[2] }}
+                  style={{ fontFamily: fonts.bold, fontSize: 20, lineHeight: 26, color: colors.ink, paddingVertical: space[2] }}
                 />
                 <HairlineRule />
               </View>
@@ -319,7 +320,7 @@ export const ProfileEditSheet = forwardRef<ProfileEditSheetRef, Props>(function 
               ))}
 
               {query.trim().length >= 2 && results.length === 0 && (
-                <Txt variant="bodySm" tone="ash" italic style={{ marginTop: space[3], fontFamily: 'InstrumentSerifItalic' }}>
+                <Txt variant="bodySm" tone="ash" weight="semibold" style={{ marginTop: space[3] }}>
                   No schools found.
                 </Txt>
               )}

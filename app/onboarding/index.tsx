@@ -178,14 +178,14 @@ export default function Onboarding() {
       <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top }}>
         <View style={{ flex: 1, paddingHorizontal: SCREEN_PADDING, justifyContent: 'center' }}>
           {/* Sanctioned ember celebration: the flame + Day 1 numeral. */}
-          <Flame size={48} color={colors.ember} strokeWidth={1.5} />
+          <Flame size={48} color={colors.ember} strokeWidth={2} fill={colors.ember} />
           <View style={{ flexDirection: 'row', alignItems: 'flex-end', marginTop: space[5] }}>
-            <Score value={1} size="xl" style={{ color: colors.ember }} />
+            <Score value={1} size="xl" tone="ember" />
             <MicroLabel style={{ marginLeft: space[3], marginBottom: space[2] }}>DAY STREAK</MicroLabel>
           </View>
-          <Txt variant="display2" style={{ marginTop: space[5], fontSize: 44, lineHeight: 48 }}>
+          <Txt variant="display2" style={{ marginTop: space[5] }}>
             Your streak{' '}
-            <Txt variant="display2" italic style={{ fontFamily: 'InstrumentSerifItalic', fontSize: 44, lineHeight: 48 }}>
+            <Txt variant="display2" weight="extrabold" tone="ember">
               starts now.
             </Txt>
           </Txt>
@@ -217,9 +217,9 @@ export default function Onboarding() {
           contentContainerStyle={{ paddingHorizontal: SCREEN_PADDING, paddingBottom: insets.bottom + 120 }}
         >
           <MicroLabel>SET UP YOUR BYLINE</MicroLabel>
-          <Txt variant="display2" style={{ marginTop: space[3], fontSize: 44, lineHeight: 48 }}>
+          <Txt variant="display2" style={{ marginTop: space[3] }}>
             Who are{' '}
-            <Txt variant="display2" italic style={{ fontFamily: 'InstrumentSerifItalic', fontSize: 44, lineHeight: 48 }}>
+            <Txt variant="display2" weight="extrabold" tone="ember">
               you?
             </Txt>
           </Txt>
@@ -228,7 +228,7 @@ export default function Onboarding() {
           <View style={{ marginTop: space[8] }}>
             <MicroLabel>HANDLE</MicroLabel>
             <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: space[2] }}>
-              <Txt variant="display3" tone="ash" style={{ fontSize: 28 }}>@</Txt>
+              <Txt variant="display3" tone="ash">@</Txt>
               <TextInput
                 value={handle}
                 onChangeText={(t) => setHandle(normalizeHandle(t))}
@@ -240,7 +240,7 @@ export default function Onboarding() {
                 style={{
                   flex: 1,
                   marginLeft: space[1],
-                  fontFamily: fonts.serif,
+                  fontFamily: fonts.bold,
                   fontSize: 28,
                   lineHeight: 32,
                   color: colors.ink,
@@ -270,7 +270,7 @@ export default function Onboarding() {
               allowFontScaling={false}
               style={{
                 marginTop: space[2],
-                fontFamily: fonts.monoMedium,
+                fontFamily: fonts.extrabold,
                 fontVariant: ['tabular-nums'],
                 fontSize: 40,
                 lineHeight: 44,
@@ -315,9 +315,9 @@ export default function Onboarding() {
     <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top + space[7] }}>
       <View style={{ paddingHorizontal: SCREEN_PADDING }}>
         <MicroLabel>WHERE DO YOU PLAY?</MicroLabel>
-        <Txt variant="display2" style={{ marginTop: space[3], fontSize: 44, lineHeight: 48 }}>
+        <Txt variant="display2" style={{ marginTop: space[3] }}>
           Your{' '}
-          <Txt variant="display2" italic style={{ fontFamily: 'InstrumentSerifItalic', fontSize: 44, lineHeight: 48 }}>
+          <Txt variant="display2" weight="extrabold" tone="ember">
             school.
           </Txt>
         </Txt>
@@ -346,7 +346,7 @@ export default function Onboarding() {
                 hitSlop={8}
                 style={{ marginTop: space[6] }}
               >
-                <Txt variant="bodyLg" italic style={{ fontFamily: 'InstrumentSerifItalic', textDecorationLine: 'underline' }}>
+                <Txt variant="bodyLg" weight="semibold" style={{ textDecorationLine: 'underline' }}>
                   Search by name instead →
                 </Txt>
               </Pressable>
@@ -374,7 +374,7 @@ export default function Onboarding() {
                 autoCorrect={false}
                 allowFontScaling={false}
                 style={{
-                  fontFamily: fonts.serif,
+                  fontFamily: fonts.bold,
                   fontSize: 24,
                   lineHeight: 28,
                   color: colors.ink,
@@ -417,7 +417,7 @@ export default function Onboarding() {
 
           {schoolMode === 'manual' && query.trim().length >= 2 && results.length === 0 && (
             <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[6] }}>
-              <Txt variant="bodyLg" tone="ash" italic style={{ fontFamily: 'InstrumentSerifItalic' }}>
+              <Txt variant="bodyLg" tone="ash" weight="semibold">
                 No schools found.
               </Txt>
             </View>

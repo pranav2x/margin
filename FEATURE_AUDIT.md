@@ -1,4 +1,4 @@
-# MARGIN — Read-Only Feature Audit
+# Elevate — Read-Only Feature Audit
 
 Project: Expo / React Native + Supabase. Live Supabase project `ilhcvnpzmhugzbxiqmdd`. Audit is read-only; no files or DB rows were modified. Live DB state at audit time: **1 profile, 0 player_stats, 0 verified stats, 0 verification_requests, 17 schools (all geocoded), 23 metrics, 0 follows/blocks/reports.**
 

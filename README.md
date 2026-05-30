@@ -89,7 +89,7 @@ components/
   primitives/         Txt, MicroLabel, HairlineRule, Avatar, PrimaryButton
   composite/          BottomTabBar, TabPill, StatLine, StatEntrySheet,
                       ShareCard, BattleShareCard
-  motion/             RollUpNumber, Score, MarginRefresh (pull-to-refresh wordmark)
+  motion/             RollUpNumber, Score, ElevateRefresh (pull-to-refresh wordmark)
 theme/                colors · type · space · motion
 state/                Zustand stores (preferences)
 lib/                  supabase client, auth helpers, hooks

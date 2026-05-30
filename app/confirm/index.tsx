@@ -108,7 +108,7 @@ export default function SchoolConfirmFeed() {
       }}
     >
       <Pressable onPress={goBack} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
-        <X size={22} color={colors.ink} strokeWidth={1.25} />
+        <X size={22} color={colors.ink} strokeWidth={2} />
       </Pressable>
     </View>
   );
@@ -122,7 +122,7 @@ export default function SchoolConfirmFeed() {
       >
         <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[4] }}>
           <MicroLabel>PEER CO-SIGN</MicroLabel>
-          <Txt variant="display1" accessibilityRole="header" style={{ marginTop: space[2], fontSize: 48, lineHeight: 52 }}>
+          <Txt variant="display2" accessibilityRole="header" style={{ marginTop: space[2] }}>
             Confirm at your school
           </Txt>
           <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[4], lineHeight: 26 }}>
@@ -142,7 +142,7 @@ export default function SchoolConfirmFeed() {
 
         {!me?.school_id ? (
           <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8] }}>
-            <Txt variant="display4" italic tone="ash" style={{ fontFamily: 'InstrumentSerifItalic' }}>
+            <Txt variant="display4" tone="ash" weight="semibold">
               Set your school on the You tab to confirm teammates.
             </Txt>
           </View>
@@ -152,7 +152,7 @@ export default function SchoolConfirmFeed() {
           </View>
         ) : rows.length === 0 ? (
           <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8] }}>
-            <Txt variant="display4" italic tone="ash" style={{ fontFamily: 'InstrumentSerifItalic' }}>
+            <Txt variant="display4" tone="ash" weight="semibold">
               Nothing to confirm right now.
             </Txt>
             <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>

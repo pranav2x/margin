@@ -32,9 +32,9 @@ function Letter({ char, delay }: { char: string; delay: number }) {
       allowFontScaling={false}
       style={[
         {
-          fontFamily: fonts.serif,
-          fontSize: 72,
-          lineHeight: 80,
+          fontFamily: fonts.extrabold,
+          fontSize: 64,
+          lineHeight: 68,
           letterSpacing: -1.5,
         },
         animated,

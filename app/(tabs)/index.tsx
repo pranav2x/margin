@@ -137,7 +137,7 @@ export default function BoardsScreen() {
     <View style={{ paddingTop: space[6] }}>
       <View style={{ paddingHorizontal: SCREEN_PADDING }}>
         <MicroLabel>LEADERBOARDS</MicroLabel>
-        <Txt variant="display1" accessibilityRole="header" style={{ marginTop: space[2], fontSize: 56, lineHeight: 60 }}>
+        <Txt variant="display1" accessibilityRole="header" style={{ marginTop: space[2] }}>
           Boards
         </Txt>
       </View>
@@ -247,7 +247,7 @@ export default function BoardsScreen() {
             <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[10], alignItems: 'flex-start' }}>
               {needsSchool ? (
                 <>
-                  <Txt variant="display4" italic tone="ash" style={{ fontSize: 20, fontFamily: 'InstrumentSerifItalic' }}>
+                  <Txt variant="display4" tone="ash" weight="semibold">
                     Pick your school to see this board.
                   </Txt>
                   <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
@@ -263,7 +263,7 @@ export default function BoardsScreen() {
                 </>
               ) : verifiedOnly ? (
                 <>
-                  <Txt variant="display4" italic tone="ash" style={{ fontSize: 20, fontFamily: 'InstrumentSerifItalic' }}>
+                  <Txt variant="display4" tone="ash" weight="semibold">
                     No verified marks yet.
                   </Txt>
                   <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
@@ -272,7 +272,7 @@ export default function BoardsScreen() {
                 </>
               ) : (
                 <>
-                  <Txt variant="display4" italic tone="ash" style={{ fontSize: 20, fontFamily: 'InstrumentSerifItalic' }}>
+                  <Txt variant="display4" tone="ash" weight="semibold">
                     Be the first name on this board.
                   </Txt>
                   <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>

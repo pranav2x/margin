@@ -1,4 +1,4 @@
-# MARGIN — Supabase schema
+# Elevate — Supabase schema
 
 Live project: **marginios** (ref `ilhcvnpzmhugzbxiqmdd`).
 

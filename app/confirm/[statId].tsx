@@ -66,7 +66,7 @@ export default function ConfirmStatScreen() {
       }}
     >
       <Pressable onPress={goBack} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
-        <X size={22} color={colors.ink} strokeWidth={1.25} />
+        <X size={22} color={colors.ink} strokeWidth={2} />
       </Pressable>
     </View>
   );
@@ -87,7 +87,7 @@ export default function ConfirmStatScreen() {
       <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top }}>
         {Header}
         <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: SCREEN_PADDING }}>
-          <Txt variant="display3" italic style={{ fontFamily: 'InstrumentSerifItalic' }}>
+          <Txt variant="display3" weight="bold">
             This mark isn't available.
           </Txt>
           <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
@@ -108,7 +108,7 @@ export default function ConfirmStatScreen() {
         contentContainerStyle={{ paddingHorizontal: SCREEN_PADDING, paddingBottom: insets.bottom + space[10] }}
       >
         <MicroLabel style={{ marginTop: space[4] }}>PEER CO-SIGN</MicroLabel>
-        <Txt variant="display1" accessibilityRole="header" style={{ marginTop: space[2], fontSize: 48, lineHeight: 52 }}>
+        <Txt variant="display2" accessibilityRole="header" style={{ marginTop: space[2] }}>
           {done ? 'Confirmed.' : `Confirm @${handle}'s mark`}
         </Txt>
 
@@ -154,11 +154,11 @@ export default function ConfirmStatScreen() {
             </Txt>
 
             {!me ? (
-              <Txt variant="bodySm" tone="ash" italic style={{ marginTop: space[4], fontFamily: 'InstrumentSerifItalic' }}>
+              <Txt variant="bodySm" tone="ash" weight="semibold" style={{ marginTop: space[4] }}>
                 Sign in with your school account to co-sign.
               </Txt>
             ) : differentSchool ? (
-              <Txt variant="bodySm" tone="ash" italic style={{ marginTop: space[4], fontFamily: 'InstrumentSerifItalic' }}>
+              <Txt variant="bodySm" tone="ash" weight="semibold" style={{ marginTop: space[4] }}>
                 Heads up: you need to be at @{handle}'s school. Set your school on the You tab if it's wrong.
               </Txt>
             ) : null}

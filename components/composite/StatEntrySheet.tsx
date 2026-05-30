@@ -211,11 +211,11 @@ export const StatEntrySheet = forwardRef<StatEntrySheetRef, Props>(function Stat
   };
 
   const inputStyle: TextStyle = {
-    fontFamily: fonts.monoMedium,
+    fontFamily: fonts.extrabold,
     fontVariant: ['tabular-nums'],
     fontSize: 40,
     lineHeight: 44,
-    letterSpacing: 1,
+    letterSpacing: -0.6,
     color: colors.ink,
     paddingVertical: space[2],
   };
@@ -238,7 +238,7 @@ export const StatEntrySheet = forwardRef<StatEntrySheetRef, Props>(function Stat
         {/* Sport + metric selection (add mode only) */}
         {!editing && !metric && (
           <View style={{ marginTop: space[4] }}>
-            <Txt variant="display3" style={{ fontSize: 32 }}>Pick a metric.</Txt>
+            <Txt variant="display3">Pick a metric.</Txt>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2], marginTop: space[5] }}>
               {SPORTS.map((s) => {
                 const active = sport === s;
@@ -252,6 +252,7 @@ export const StatEntrySheet = forwardRef<StatEntrySheetRef, Props>(function Stat
                       paddingHorizontal: space[4],
                       borderWidth: 1,
                       borderColor: colors.ink,
+                      borderRadius: 8,
                       backgroundColor: active ? colors.ink : 'transparent',
                       minHeight: 44,
                       justifyContent: 'center',
@@ -259,7 +260,7 @@ export const StatEntrySheet = forwardRef<StatEntrySheetRef, Props>(function Stat
                   >
                     <Text
                       allowFontScaling={false}
-                      style={{ fontFamily: fonts.bodyMedium, fontSize: 12, letterSpacing: 0.6, color: active ? colors.paper : colors.ink }}
+                      style={{ fontFamily: fonts.semibold, fontSize: 12, letterSpacing: 0.6, color: active ? colors.paper : colors.ink }}
                     >
                       {SPORT_LABELS[s]}
                     </Text>
@@ -289,7 +290,7 @@ export const StatEntrySheet = forwardRef<StatEntrySheetRef, Props>(function Stat
         {metric && (
           <View style={{ marginTop: space[4] }}>
             <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
-              <Txt variant="display3" style={{ fontSize: 32, flex: 1 }}>{metric.label}</Txt>
+              <Txt variant="display3" style={{ flex: 1 }}>{metric.label}</Txt>
               {!editing && (
                 <Pressable onPress={() => { Haptics.selectionAsync(); setMetric(null); setValue(''); }} hitSlop={8}>
                   <MicroLabel>CHANGE</MicroLabel>
@@ -310,7 +311,7 @@ export const StatEntrySheet = forwardRef<StatEntrySheetRef, Props>(function Stat
               />
               <HairlineRule />
               {!plausible && (
-                <Txt variant="bodySm" tone="ash" italic style={{ marginTop: space[3], fontFamily: 'InstrumentSerifItalic' }}>
+                <Txt variant="bodySm" tone="ash" weight="semibold" style={{ marginTop: space[3] }}>
                   That's outside the expected range — we'll still save it, but verify it to rank.
                 </Txt>
               )}
@@ -323,7 +324,7 @@ export const StatEntrySheet = forwardRef<StatEntrySheetRef, Props>(function Stat
                 onChangeText={setNotes}
                 placeholder="e.g. wind-legal, FAT timing, splits…"
                 placeholderTextColor={colors.ash}
-                style={{ fontFamily: fonts.body, fontSize: 16, lineHeight: 22, color: colors.ink, paddingVertical: space[2] }}
+                style={{ fontFamily: fonts.medium, fontSize: 16, lineHeight: 22, color: colors.ink, paddingVertical: space[2] }}
               />
               <HairlineRule />
             </View>
@@ -371,12 +372,12 @@ export const StatEntrySheet = forwardRef<StatEntrySheetRef, Props>(function Stat
                   </View>
 
                   {requested === 'peer_cosign' && (
-                    <Txt variant="bodySm" italic tone="ash" style={{ marginTop: space[4], fontFamily: 'InstrumentSerifItalic' }}>
+                    <Txt variant="bodySm" weight="semibold" tone="ash" style={{ marginTop: space[4] }}>
                       Invite shared. When a teammate at your school opens it and co-signs, this mark goes Verified.
                     </Txt>
                   )}
                   {requested === 'video_proof' && (
-                    <Txt variant="bodySm" italic tone="ash" style={{ marginTop: space[4], fontFamily: 'InstrumentSerifItalic' }}>
+                    <Txt variant="bodySm" weight="semibold" tone="ash" style={{ marginTop: space[4] }}>
                       Logged — but a teammate's co-sign is what turns a mark Verified for now.
                     </Txt>
                   )}

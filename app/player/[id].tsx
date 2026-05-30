@@ -133,7 +133,7 @@ export default function PlayerProfile() {
       }}
     >
       <Pressable onPress={() => router.back()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
-        <X size={22} color={colors.ink} strokeWidth={1.25} />
+        <X size={22} color={colors.ink} strokeWidth={2} />
       </Pressable>
     </View>
   );
@@ -154,7 +154,7 @@ export default function PlayerProfile() {
       <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top }}>
         {Header}
         <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: SCREEN_PADDING }}>
-          <Txt variant="display3" italic style={{ fontFamily: 'InstrumentSerifItalic' }}>
+          <Txt variant="display3" weight="bold">
             This profile isn't available.
           </Txt>
         </View>
@@ -171,10 +171,10 @@ export default function PlayerProfile() {
       >
         <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[5] }}>
           <Avatar uri={profile.avatar_url ?? undefined} size={88} />
-          <Txt variant="display1" accessibilityRole="header" style={{ marginTop: space[5], fontSize: 56, lineHeight: 60 }}>
+          <Txt variant="display1" accessibilityRole="header" style={{ marginTop: space[5] }}>
             {profile.display_name ?? `@${handle}`}
           </Txt>
-          <Txt variant="bodySm" tone="ash" style={{ marginTop: space[1], fontFamily: 'GeistMono' }}>
+          <Txt variant="bodySm" tone="ash" weight="semibold" style={{ marginTop: space[1], fontVariant: ['tabular-nums'] }}>
             @{handle}
           </Txt>
           {metaLine.length > 0 && <MicroLabel style={{ marginTop: space[4] }}>{metaLine}</MicroLabel>}
@@ -272,7 +272,7 @@ export default function PlayerProfile() {
 
         {grouped.length === 0 ? (
           <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[5] }}>
-            <Txt variant="display4" italic tone="ash" style={{ fontFamily: 'InstrumentSerifItalic' }}>
+            <Txt variant="display4" tone="ash" weight="semibold">
               No marks on this board yet.
             </Txt>
           </View>
@@ -280,7 +280,7 @@ export default function PlayerProfile() {
           grouped.map((group) => (
             <View key={group.sport}>
               <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[5], paddingBottom: space[1] }}>
-                <Txt variant="display4" style={{ fontSize: 22 }}>{SPORT_LABELS[group.sport]}</Txt>
+                <Txt variant="display4">{SPORT_LABELS[group.sport]}</Txt>
               </View>
               <HairlineRule />
               {group.rows.map((s, i) => (

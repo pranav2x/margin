@@ -11,18 +11,12 @@ import { View, ActivityIndicator } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 
 import {
-  InstrumentSerif_400Regular,
-  InstrumentSerif_400Regular_Italic,
-} from '@expo-google-fonts/instrument-serif';
-import {
-  Geist_400Regular,
-  Geist_500Medium,
-  Geist_600SemiBold,
-} from '@expo-google-fonts/geist';
-import {
-  GeistMono_400Regular,
-  GeistMono_500Medium,
-} from '@expo-google-fonts/geist-mono';
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  Inter_800ExtraBold,
+} from '@expo-google-fonts/inter';
 
 import { useTheme } from '../theme';
 import { supabase } from '../lib/supabase';
@@ -40,13 +34,11 @@ const queryClient = new QueryClient({
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    InstrumentSerif: InstrumentSerif_400Regular,
-    InstrumentSerifItalic: InstrumentSerif_400Regular_Italic,
-    Geist: Geist_400Regular,
-    GeistMedium: Geist_500Medium,
-    GeistSemibold: Geist_600SemiBold,
-    GeistMono: GeistMono_400Regular,
-    GeistMonoMedium: GeistMono_500Medium,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
   });
 
   useEffect(() => {
@@ -179,6 +171,13 @@ function ThemedRoot() {
         />
         <Stack.Screen name="onboarding/index" options={{ animation: 'fade' }} />
         <Stack.Screen name="splash" options={{ animation: 'fade' }} />
+        {/* Phase 1 stubs for Lane B (Calls / Takes) and Lane D (Clips). */}
+        <Stack.Screen name="calls/index" options={{ animation: 'slide_from_bottom', presentation: 'card' }} />
+        <Stack.Screen name="calls/new" options={{ animation: 'slide_from_bottom', presentation: 'card' }} />
+        <Stack.Screen name="calls/[id]" options={{ animation: 'slide_from_bottom', presentation: 'card' }} />
+        <Stack.Screen name="takes/new" options={{ animation: 'slide_from_bottom', presentation: 'card' }} />
+        <Stack.Screen name="clips/new" options={{ animation: 'slide_from_bottom', presentation: 'card' }} />
+        <Stack.Screen name="clips/[id]" options={{ animation: 'slide_from_bottom', presentation: 'card' }} />
       </Stack>
     </View>
   );

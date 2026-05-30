@@ -1,7 +1,7 @@
-import { ScrollView, Pressable } from 'react-native';
+import { ScrollView, Pressable, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Txt } from '../primitives/Text';
-import { space, SCREEN_PADDING } from '../../theme';
+import { space, SCREEN_PADDING, useTheme } from '../../theme';
 
 interface Props {
   items: string[];
@@ -10,7 +10,12 @@ interface Props {
   inverted?: boolean;
 }
 
+/**
+ * Horizontal scroll of text pills. Active = ink (or paper if inverted),
+ * bold weight + a 2px ember underline. Inactive = ash, semibold, no underline.
+ */
 export function TabPill({ items, active, onChange, inverted }: Props) {
+  const { colors } = useTheme();
   return (
     <ScrollView
       horizontal
@@ -18,7 +23,7 @@ export function TabPill({ items, active, onChange, inverted }: Props) {
       contentContainerStyle={{
         paddingHorizontal: SCREEN_PADDING,
         gap: space[5],
-        alignItems: 'center',
+        alignItems: 'flex-end',
       }}
       style={{ flexGrow: 0 }}
     >
@@ -31,20 +36,24 @@ export function TabPill({ items, active, onChange, inverted }: Props) {
               Haptics.selectionAsync();
               onChange(item);
             }}
-            style={{ paddingVertical: space[3] }}
+            style={{ paddingTop: space[3], paddingBottom: space[2] }}
           >
             <Txt
               variant="bodyLg"
-              italic={isActive}
+              weight={isActive ? 'bold' : 'semibold'}
               tone={isActive ? 'ink' : 'ash'}
               inverted={inverted}
-              style={{
-                fontSize: 17,
-                fontFamily: isActive ? 'InstrumentSerifItalic' : 'Geist',
-              }}
             >
               {item}
             </Txt>
+            <View
+              style={{
+                marginTop: space[1],
+                height: 2,
+                borderRadius: 1,
+                backgroundColor: isActive ? colors.ember : 'transparent',
+              }}
+            />
           </Pressable>
         );
       })}

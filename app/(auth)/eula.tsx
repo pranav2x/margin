@@ -27,7 +27,7 @@ function Checkbox({ checked }: { checked: boolean }) {
       }}
     >
       {checked && (
-        <Txt style={{ color: colors.paper, fontSize: 14, lineHeight: 16, fontFamily: 'GeistMedium' }}>
+        <Txt weight="bold" style={{ color: colors.paper, fontSize: 14, lineHeight: 16 }}>
           ✓
         </Txt>
       )}
@@ -91,9 +91,9 @@ export default function Eula() {
     >
       <View style={{ paddingHorizontal: SCREEN_PADDING }}>
         <MicroLabel>THE GROUND RULES</MicroLabel>
-        <Txt variant="display2" style={{ marginTop: space[4], fontSize: 44, lineHeight: 48 }}>
+        <Txt variant="display2" style={{ marginTop: space[4] }}>
           Play it{' '}
-          <Txt variant="display2" italic style={{ fontFamily: 'InstrumentSerifItalic', fontSize: 44, lineHeight: 48 }}>
+          <Txt variant="display2" weight="extrabold" tone="ember">
             straight.
           </Txt>
         </Txt>
@@ -127,8 +127,8 @@ export default function Eula() {
         >
           <Txt
             variant="bodyLg"
-            italic
-            style={{ fontFamily: 'InstrumentSerifItalic', textDecorationLine: 'underline' }}
+            weight="semibold"
+            style={{ textDecorationLine: 'underline' }}
           >
             Read the full community rules →
           </Txt>

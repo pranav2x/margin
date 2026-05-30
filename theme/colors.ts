@@ -13,8 +13,10 @@
  *   fog     — hairlines and the faintest fills
  *   ash     — secondary / muted foreground
  *   shadow  — inverted hairline / high-contrast divider
- *   ember   — the one accent (action + achievement)
+ *   ember   — the one accent (action + achievement) — Strava orange
  *   void    — true black (system edges)
+ *
+ *   emberPressed — pressed/active state for the ember CTA (added Phase 1)
  */
 
 export interface ColorPalette {
@@ -26,26 +28,29 @@ export interface ColorPalette {
   shadow: string;
   ember: string;
   void: string;
+  emberPressed: string;
 }
 
 export const lightColors: ColorPalette = {
-  ink: '#0A0A0A',
-  paper: '#F8F6F1',
-  surface: '#F1EDE4',
-  fog: '#E8E5DE',
-  ash: '#8C8A85',
-  shadow: '#2A2826',
-  ember: '#D9430F',
+  ink: '#1A1A1A',
+  paper: '#FFFFFF',
+  surface: '#F7F7F7',
+  fog: '#E5E5E5',
+  ash: '#6B6B6B',
+  shadow: '#8E8E93',
+  ember: '#FC5200',
   void: '#000000',
+  emberPressed: '#CC4200',
 };
 
 export const darkColors: ColorPalette = {
-  ink: '#EDEAE3',
-  paper: '#0F0E0C',
-  surface: '#1A1815',
-  fog: '#26241F',
-  ash: '#6F6D68',
-  shadow: '#D6D2C9',
-  ember: '#FF5A2C',
+  ink: '#F5F5F5',
+  paper: '#121212',
+  surface: '#1E1E1E',
+  fog: '#2A2A2A',
+  ash: '#A0A0A0',
+  shadow: '#8E8E93',
+  ember: '#FC5200',
   void: '#000000',
+  emberPressed: '#CC4200',
 };

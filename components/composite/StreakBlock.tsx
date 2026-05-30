@@ -11,19 +11,19 @@ interface Props {
   streak: StreakData;
 }
 
-// The daily-return module on the You tab: an ember flame numeral — the single
-// sanctioned accent here — above a strictly monochrome 7-day strip. Filled =
-// active, hairline = missed, snowflake = a day a freeze bridged. The strip and
-// snowflake never use ember; ember belongs only to the flame.
+// The daily-return module on the You tab. Ember flame numeral above a
+// monochrome 7-day strip. Filled = active, hairline = missed, snowflake = a day
+// a freeze bridged. Ember belongs to the flame and the day count only — the
+// strip stays ink/fog so the celebration reads as a single accented line.
 export function StreakBlock({ streak }: Props) {
   const { colors } = useTheme();
 
   return (
     <View accessibilityRole="summary" accessibilityLabel={`${streak.current} day streak`}>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Flame size={28} color={colors.ember} strokeWidth={1.75} />
-        {/* Geist Mono tabular numeral — ember, tabular so 9 → 10 never shifts. */}
-        <Score value={streak.current} size="lg" style={{ color: colors.ember, marginLeft: space[2] }} />
+        <Flame size={28} color={colors.ember} strokeWidth={2} fill={colors.ember} />
+        {/* Inter tabular numeral — ember, tabular so 9 → 10 never shifts. */}
+        <Score value={streak.current} size="lg" tone="ember" style={{ marginLeft: space[2] }} />
         <MicroLabel style={{ marginLeft: space[3] }}>DAY STREAK</MicroLabel>
       </View>
 
@@ -34,6 +34,7 @@ export function StreakBlock({ streak }: Props) {
               style={{
                 width: CELL,
                 height: CELL,
+                borderRadius: 6,
                 alignItems: 'center',
                 justifyContent: 'center',
                 backgroundColor: d.state === 'active' ? colors.ink : 'transparent',
@@ -41,7 +42,7 @@ export function StreakBlock({ streak }: Props) {
                 borderColor: colors.fog,
               }}
             >
-              {d.state === 'frozen' ? <Snowflake size={14} color={colors.ash} strokeWidth={1.5} /> : null}
+              {d.state === 'frozen' ? <Snowflake size={14} color={colors.ash} strokeWidth={2} /> : null}
             </View>
             <MicroLabel tone={d.isToday ? 'ink' : 'ash'}>{d.label}</MicroLabel>
           </View>

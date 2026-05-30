@@ -60,6 +60,8 @@ const Digit = memo(({ current, next, index, size, color, trigger, onSettled }: D
 
   const isDigit = current >= '0' && current <= '9';
 
+  const numericFamily = v.fontFamily ?? fonts.extrabold;
+
   if (!isDigit || current === next) {
     return (
       <Animated.Text
@@ -68,7 +70,7 @@ const Digit = memo(({ current, next, index, size, color, trigger, onSettled }: D
           v as TextStyle,
           {
             color,
-            fontFamily: fonts.monoMedium,
+            fontFamily: numericFamily,
             fontVariant: ['tabular-nums'],
             textAlign: 'center',
           },
@@ -88,7 +90,7 @@ const Digit = memo(({ current, next, index, size, color, trigger, onSettled }: D
             v as TextStyle,
             {
               color,
-              fontFamily: fonts.monoMedium,
+              fontFamily: numericFamily,
               fontVariant: ['tabular-nums'],
               textAlign: 'center',
               width: charWidth,
@@ -104,7 +106,7 @@ const Digit = memo(({ current, next, index, size, color, trigger, onSettled }: D
             v as TextStyle,
             {
               color,
-              fontFamily: fonts.monoMedium,
+              fontFamily: numericFamily,
               fontVariant: ['tabular-nums'],
               textAlign: 'center',
               width: charWidth,

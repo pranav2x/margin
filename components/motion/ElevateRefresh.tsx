@@ -20,10 +20,10 @@ interface Props {
 }
 
 /**
- * The Elevate word — stretches downward as the user pulls, italicizes
- * at the threshold, and oscillates gently while refreshing.
+ * The Elevate wordmark — stretches downward as the user pulls, then weight-bumps
+ * at the threshold to mark the trigger. Oscillates gently while refreshing.
  */
-export function MarginRefresh({ pull, refreshing, threshold = 80 }: Props) {
+export function ElevateRefresh({ pull, refreshing, threshold = 80 }: Props) {
   const { colors } = useTheme();
 
   const idle = useSharedValue(0);
@@ -49,28 +49,29 @@ export function MarginRefresh({ pull, refreshing, threshold = 80 }: Props) {
     };
   });
 
-  const italicProgress = useDerivedValue(() =>
+  // Cross-fade between bold (idle) and extrabold (triggered/refreshing).
+  const heavyProgress = useDerivedValue(() =>
     interpolate(pull.value, [threshold * 0.85, threshold * 1.1], [0, 1], Extrapolation.CLAMP),
   );
 
-  const italicStyle = useAnimatedStyle(() => ({
-    opacity: refreshing ? 1 : italicProgress.value,
+  const heavyStyle = useAnimatedStyle(() => ({
+    opacity: refreshing ? 1 : heavyProgress.value,
   }));
 
-  const uprightStyle = useAnimatedStyle(() => ({
-    opacity: refreshing ? 0 : 1 - italicProgress.value,
+  const lightStyle = useAnimatedStyle(() => ({
+    opacity: refreshing ? 0 : 1 - heavyProgress.value,
   }));
 
   const baseStyle: TextStyle = {
     ...(type.display4 as TextStyle),
-    fontFamily: fonts.serif,
+    fontFamily: fonts.bold,
     color: colors.ink,
     letterSpacing: 0.5,
   };
 
-  const italicTextStyle: TextStyle = {
+  const heavyTextStyle: TextStyle = {
     ...baseStyle,
-    fontFamily: fonts.serifItalic,
+    fontFamily: fonts.extrabold,
   };
 
   return (
@@ -89,14 +90,14 @@ export function MarginRefresh({ pull, refreshing, threshold = 80 }: Props) {
     >
       <Animated.View style={animatedStyle}>
         <View>
-          <Animated.Text allowFontScaling={false} style={[baseStyle, uprightStyle]}>
+          <Animated.Text allowFontScaling={false} style={[baseStyle, lightStyle]}>
             Elevate
           </Animated.Text>
           <Animated.Text
             allowFontScaling={false}
             style={[
-              italicTextStyle,
-              italicStyle,
+              heavyTextStyle,
+              heavyStyle,
               { position: 'absolute', top: 0, left: 0 },
             ]}
           >

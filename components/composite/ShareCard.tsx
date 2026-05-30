@@ -3,7 +3,6 @@ import { View } from 'react-native';
 import { Txt } from '../primitives/Text';
 import { MicroLabel } from '../primitives/MicroLabel';
 import { HairlineRule } from '../primitives/HairlineRule';
-import { Grain } from '../primitives/Grain';
 import { Score } from '../motion/Score';
 import { VerifiedMark } from './StatLine';
 import { useTheme, space } from '../../theme';
@@ -22,8 +21,9 @@ interface Props {
   stats: HeadlineStat[];
 }
 
-// A black-and-white press-clipping. Rendered on-screen and also the capture
-// target for the share sheet. Reads as newsprint in both light and dark.
+// Strava-faithful press-clipping. Rendered on-screen and the capture target for
+// the share sheet. Reads as a flat card: surface fill, 1px fog border, big
+// Inter 800 wordmark, hairline rules between sections.
 export const ShareCard = forwardRef<View, Props>(function ShareCard(
   { handle, school, sportLabel, stats },
   ref,
@@ -38,15 +38,12 @@ export const ShareCard = forwardRef<View, Props>(function ShareCard(
       style={{
         backgroundColor: colors.surface,
         borderWidth: 1,
-        borderColor: colors.ink,
+        borderColor: colors.fog,
+        borderRadius: 12,
         padding: space[6],
       }}
     >
-      {/* Newsprint grain — sits under the type, captured with the card. */}
-      <Grain />
-      <Txt variant="display3" style={{ fontSize: 34, lineHeight: 36, letterSpacing: 1 }}>
-        Elevate
-      </Txt>
+      <Txt variant="display2">Elevate</Txt>
       <MicroLabel style={{ marginTop: space[2] }}>
         @{handle}{meta ? `  ·  ${meta}` : ''}
       </MicroLabel>
@@ -54,7 +51,7 @@ export const ShareCard = forwardRef<View, Props>(function ShareCard(
       <HairlineRule style={{ marginVertical: space[5] }} />
 
       {stats.length === 0 ? (
-        <Txt variant="display4" italic tone="ash" style={{ fontFamily: 'InstrumentSerifItalic' }}>
+        <Txt variant="display4" tone="ash" weight="semibold">
           No headline stat yet.
         </Txt>
       ) : (
@@ -62,7 +59,7 @@ export const ShareCard = forwardRef<View, Props>(function ShareCard(
           <View key={s.label} style={{ marginTop: i === 0 ? 0 : space[5] }}>
             <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
               <View style={{ flex: 1, paddingRight: space[4] }}>
-                <Txt variant="bodyLg">{s.label}</Txt>
+                <Txt variant="bodyLg" weight="semibold">{s.label}</Txt>
                 {s.unit ? <MicroLabel style={{ marginTop: space[1] }}>{s.unit}</MicroLabel> : null}
               </View>
               <Score value={s.value} size="lg" />

@@ -61,21 +61,14 @@ export default function SignIn() {
         <View style={{ flex: 1, justifyContent: 'center', paddingBottom: space[9] }}>
           <Txt
             variant="display1"
-            style={{ fontSize: 76, lineHeight: 80 }}
             accessibilityRole="header"
           >
             Elevate
           </Txt>
           <Txt
-            variant="display4"
-            italic
+            variant="bodyLg"
             tone="ash"
-            style={{
-              marginTop: space[4],
-              fontFamily: 'InstrumentSerifItalic',
-              fontSize: 24,
-              lineHeight: 30,
-            }}
+            style={{ marginTop: space[4] }}
           >
             Your game, by the numbers.
           </Txt>

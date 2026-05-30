@@ -36,6 +36,7 @@ import {
 import { useStreak } from '../../lib/hooks/useStreak';
 import { useTheme, space, SCREEN_PADDING } from '../../theme';
 import { signOut } from '../../lib/auth';
+import { useCreateSheetStore } from '../../state/createSheet';
 
 export default function YouScreen() {
   const { colors } = useTheme();
@@ -65,6 +66,15 @@ export default function YouScreen() {
       return () => clearTimeout(t);
     }
   }, [params.edit]);
+
+  // Register the StatEntrySheet trigger so the BottomTabBar's create-button
+  // "Log stat" row can open it. Cleared on unmount so a backgrounded screen
+  // never claims the handler.
+  const setStatEntryHandler = useCreateSheetStore((s) => s.setStatEntryHandler);
+  useEffect(() => {
+    setStatEntryHandler(() => sheetRef.current?.present());
+    return () => setStatEntryHandler(null);
+  }, [setStatEntryHandler]);
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -166,10 +176,10 @@ export default function YouScreen() {
             {/* Newsprint grain behind the masthead — faint, non-interactive. */}
             <Grain />
             <Avatar uri={profile?.avatar_url ?? undefined} size={88} />
-            <Txt variant="display1" accessibilityRole="header" style={{ marginTop: space[5], fontSize: 56, lineHeight: 60 }}>
+            <Txt variant="display1" accessibilityRole="header" style={{ marginTop: space[5] }}>
               {profile?.display_name ?? `@${handle}`}
             </Txt>
-            <Txt variant="bodySm" tone="ash" style={{ marginTop: space[1], fontFamily: 'GeistMono' }}>
+            <Txt variant="bodySm" tone="ash" weight="semibold" style={{ marginTop: space[1], fontVariant: ['tabular-nums'] }}>
               @{handle}
             </Txt>
             {metaLine.length > 0 && <MicroLabel style={{ marginTop: space[4] }}>{metaLine}</MicroLabel>}
@@ -238,7 +248,7 @@ export default function YouScreen() {
             </View>
           ) : (
             <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[7] }}>
-              <Txt variant="display4" italic tone="ash" style={{ fontFamily: 'InstrumentSerifItalic' }}>
+              <Txt variant="display4" tone="ash" weight="semibold">
                 No stats yet — add your first below.
               </Txt>
             </View>
@@ -258,7 +268,7 @@ export default function YouScreen() {
 
           {grouped.length === 0 ? (
             <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[5] }}>
-              <Txt variant="display4" italic tone="ash" style={{ fontFamily: 'InstrumentSerifItalic' }}>
+              <Txt variant="display4" tone="ash" weight="semibold">
                 Your board is a blank page.
               </Txt>
               <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
@@ -272,7 +282,7 @@ export default function YouScreen() {
               {grouped.map((group) => (
                 <View key={group.sport}>
                   <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[5], paddingBottom: space[1] }}>
-                    <Txt variant="display4" style={{ fontSize: 22 }}>{SPORT_LABELS[group.sport]}</Txt>
+                    <Txt variant="display4">{SPORT_LABELS[group.sport]}</Txt>
                   </View>
                   <HairlineRule />
                   {group.rows.map((s, i) => (

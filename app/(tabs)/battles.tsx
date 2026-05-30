@@ -220,7 +220,7 @@ export default function BattlesScreen() {
         >
           <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[6] }}>
             <MicroLabel>HEAD TO HEAD</MicroLabel>
-            <Txt variant="display1" accessibilityRole="header" style={{ marginTop: space[2], fontSize: 56, lineHeight: 60 }}>
+            <Txt variant="display1" accessibilityRole="header" style={{ marginTop: space[2] }}>
               Battles
             </Txt>
             <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[4], lineHeight: 26 }}>
@@ -230,7 +230,7 @@ export default function BattlesScreen() {
 
           {!mySport ? (
             <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8] }}>
-              <Txt variant="display4" italic tone="ash" style={{ fontFamily: 'InstrumentSerifItalic' }}>
+              <Txt variant="display4" tone="ash" weight="semibold">
                 A battle needs a sport.
               </Txt>
               <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
@@ -260,9 +260,9 @@ export default function BattlesScreen() {
                   autoCorrect={false}
                   allowFontScaling={false}
                   style={{
-                    fontFamily: fonts.serif,
-                    fontSize: 28,
-                    lineHeight: 32,
+                    fontFamily: fonts.bold,
+                    fontSize: 24,
+                    lineHeight: 28,
                     color: colors.ink,
                     paddingVertical: space[2],
                   }}
@@ -278,7 +278,7 @@ export default function BattlesScreen() {
 
               {query.trim().length >= 2 && (searchQ.data ?? []).length === 0 && !searchQ.isFetching && (
                 <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[5] }}>
-                  <Txt variant="bodyLg" tone="ash" italic style={{ fontFamily: 'InstrumentSerifItalic' }}>
+                  <Txt variant="bodyLg" tone="ash" weight="semibold">
                     No {sportLabel?.toLowerCase()} athletes by that handle.
                   </Txt>
                 </View>
@@ -300,7 +300,7 @@ export default function BattlesScreen() {
                 <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[5] }}>
                   {me?.school_id ? (
                     <>
-                      <Txt variant="display4" italic tone="ash" style={{ fontFamily: 'InstrumentSerifItalic' }}>
+                      <Txt variant="display4" tone="ash" weight="semibold">
                         First name on the wall.
                       </Txt>
                       <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
@@ -309,7 +309,7 @@ export default function BattlesScreen() {
                     </>
                   ) : (
                     <>
-                      <Txt variant="display4" italic tone="ash" style={{ fontFamily: 'InstrumentSerifItalic' }}>
+                      <Txt variant="display4" tone="ash" weight="semibold">
                         Pick your school to find teammates.
                       </Txt>
                       <View style={{ marginTop: space[4] }}>
@@ -372,7 +372,7 @@ export default function BattlesScreen() {
                 </View>
               ) : (nearbyOpponentsQ.data ?? []).length === 0 ? (
                 <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[5] }}>
-                  <Txt variant="display4" italic tone="ash" style={{ fontFamily: 'InstrumentSerifItalic' }}>
+                  <Txt variant="display4" tone="ash" weight="semibold">
                     Nobody at the neighbors — yet.
                   </Txt>
                   <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
@@ -414,7 +414,7 @@ export default function BattlesScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: SCREEN_PADDING, paddingTop: space[7] }}>
             <View style={{ flex: 1, alignItems: 'center' }}>
               <Avatar uri={me?.avatar_url ?? undefined} size={56} />
-              <Txt variant="bodySm" numberOfLines={1} style={{ marginTop: space[2], fontFamily: 'GeistMono' }}>@{me?.handle ?? 'you'}</Txt>
+              <Txt variant="bodySm" weight="semibold" numberOfLines={1} style={{ marginTop: space[2], fontVariant: ['tabular-nums'] }}>@{me?.handle ?? 'you'}</Txt>
             </View>
             <View style={{ alignItems: 'center', paddingHorizontal: space[4] }}>
               <Score value={`${myWins}–${oppWins}`} size="xl" />
@@ -422,7 +422,7 @@ export default function BattlesScreen() {
             </View>
             <View style={{ flex: 1, alignItems: 'center' }}>
               <Avatar uri={opp?.avatar_url ?? undefined} size={56} />
-              <Txt variant="bodySm" numberOfLines={1} style={{ marginTop: space[2], fontFamily: 'GeistMono' }}>@{opp?.handle ?? ''}</Txt>
+              <Txt variant="bodySm" weight="semibold" numberOfLines={1} style={{ marginTop: space[2], fontVariant: ['tabular-nums'] }}>@{opp?.handle ?? ''}</Txt>
             </View>
           </View>
 
@@ -440,7 +440,7 @@ export default function BattlesScreen() {
           </View>
         ) : comparison.length === 0 ? (
           <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8] }}>
-            <Txt variant="display4" italic tone="ash" style={{ fontFamily: 'InstrumentSerifItalic' }}>
+            <Txt variant="display4" tone="ash" weight="semibold">
               No shared metrics yet.
             </Txt>
             <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>

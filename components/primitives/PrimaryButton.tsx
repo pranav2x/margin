@@ -7,6 +7,8 @@ import * as Haptics from 'expo-haptics';
 interface Props extends Omit<PressableProps, 'children' | 'style'> {
   label: string;
   variant?: 'primary' | 'ghost';
+  /** Compact = 40h (used in dense rows); default = 48h Strava CTA */
+  size?: 'default' | 'compact';
   full?: boolean;
   inverted?: boolean;
   style?: ViewStyle;
@@ -15,6 +17,7 @@ interface Props extends Omit<PressableProps, 'children' | 'style'> {
 export function PrimaryButton({
   label,
   variant = 'primary',
+  size = 'default',
   full,
   inverted,
   onPress,
@@ -25,16 +28,13 @@ export function PrimaryButton({
   const { colors } = useTheme();
 
   const filled = variant === 'primary';
-  // Ember is the one accent and the filled primary button is its CTA role: a
-  // solid ember fill carrying a light (paper) label. paper-on-ember clears 3:1
-  // in both themes and reads fine at button weight. Ghost buttons stay a
-  // monochrome ink outline. (The inverted filled variant — for ink surfaces —
-  // intentionally stays paper, not ember, and is unused today.)
+  // Primary = filled ember (paper label). Ghost = ink outline on paper bg.
+  // The inverted filled variant flips to paper-on-ink (unused today but kept).
   const bg = filled
     ? inverted
       ? colors.paper
       : colors.ember
-    : 'transparent';
+    : colors.paper;
   const fg = filled
     ? inverted
       ? colors.ink
@@ -42,7 +42,14 @@ export function PrimaryButton({
     : inverted
       ? colors.paper
       : colors.ink;
-  const borderColor = inverted ? colors.paper : colors.ink;
+  const borderColor = filled ? 'transparent' : inverted ? colors.paper : colors.ink;
+  const pressedBg = filled
+    ? inverted
+      ? colors.fog
+      : colors.emberPressed
+    : colors.surface;
+
+  const height = size === 'compact' ? 40 : 48;
 
   return (
     <Pressable
@@ -54,14 +61,15 @@ export function PrimaryButton({
       }}
       style={({ pressed }) => [
         {
-          backgroundColor: bg,
+          backgroundColor: pressed && !disabled ? pressedBg : bg,
           borderWidth: filled ? 0 : 1,
           borderColor,
-          paddingVertical: space[4],
-          paddingHorizontal: space[6],
+          borderRadius: 12,
+          minHeight: height,
+          paddingHorizontal: space[5],
           alignItems: 'center',
           justifyContent: 'center',
-          opacity: disabled ? 0.4 : pressed ? 0.8 : 1,
+          opacity: disabled ? 0.4 : 1,
           alignSelf: full ? 'stretch' : 'flex-start',
         },
         style,

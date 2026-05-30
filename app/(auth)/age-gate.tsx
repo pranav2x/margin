@@ -106,9 +106,9 @@ export default function AgeGate() {
         }}
       >
         <MicroLabel>AGE REQUIREMENT</MicroLabel>
-        <Txt variant="display2" style={{ marginTop: space[4], fontSize: 44, lineHeight: 48 }}>
+        <Txt variant="display2" style={{ marginTop: space[4] }}>
           Elevate is for ages{' '}
-          <Txt variant="display2" italic style={{ fontFamily: 'InstrumentSerifItalic', fontSize: 44, lineHeight: 48 }}>
+          <Txt variant="display2" weight="extrabold" tone="ember">
             13 and up.
           </Txt>
         </Txt>
@@ -133,9 +133,9 @@ export default function AgeGate() {
       }}
     >
       <MicroLabel>ONE QUICK THING</MicroLabel>
-      <Txt variant="display2" style={{ marginTop: space[4], fontSize: 44, lineHeight: 48 }}>
+      <Txt variant="display2" style={{ marginTop: space[4] }}>
         What year were you{' '}
-        <Txt variant="display2" italic style={{ fontFamily: 'InstrumentSerifItalic', fontSize: 44, lineHeight: 48 }}>
+        <Txt variant="display2" weight="extrabold" tone="ember">
           born?
         </Txt>
       </Txt>
@@ -154,10 +154,10 @@ export default function AgeGate() {
           autoFocus
           allowFontScaling={false}
           style={{
-            fontFamily: fonts.monoMedium,
+            fontFamily: fonts.extrabold,
             fontVariant: ['tabular-nums'],
-            fontSize: 64,
-            lineHeight: 68,
+            fontSize: 56,
+            lineHeight: 60,
             letterSpacing: 4,
             color: colors.ink,
             paddingVertical: space[2],

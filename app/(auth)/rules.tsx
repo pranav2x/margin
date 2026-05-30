@@ -49,7 +49,7 @@ export default function Rules() {
       >
         <MicroLabel>COMMUNITY RULES</MicroLabel>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <X size={22} color={colors.ink} strokeWidth={1.25} />
+          <X size={22} color={colors.ink} strokeWidth={2} />
         </Pressable>
       </View>
 
@@ -59,9 +59,9 @@ export default function Rules() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: SCREEN_PADDING, paddingBottom: insets.bottom + space[10] }}
       >
-        <Txt variant="display2" style={{ marginTop: space[7], fontSize: 44, lineHeight: 48 }}>
+        <Txt variant="display2" style={{ marginTop: space[7] }}>
           The{' '}
-          <Txt variant="display2" italic style={{ fontFamily: 'InstrumentSerifItalic', fontSize: 44, lineHeight: 48 }}>
+          <Txt variant="display2" weight="extrabold" tone="ember">
             rules.
           </Txt>
         </Txt>
@@ -71,7 +71,7 @@ export default function Rules() {
 
         {SECTIONS.map((s, i) => (
           <View key={s.heading} style={{ marginTop: i === 0 ? space[8] : space[6] }}>
-            <Txt variant="display4" style={{ fontSize: 22, lineHeight: 26 }}>
+            <Txt variant="display4">
               {s.heading}
             </Txt>
             <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3], lineHeight: 26 }}>
@@ -81,12 +81,7 @@ export default function Rules() {
         ))}
 
         <View style={{ paddingVertical: space[10], alignItems: 'center' }}>
-          <Txt
-            variant="display4"
-            italic
-            tone="ash"
-            style={{ fontSize: 18, fontFamily: 'InstrumentSerifItalic' }}
-          >
+          <Txt variant="bodyLg" weight="semibold" tone="ash">
             Keep it clean.
           </Txt>
         </View>
