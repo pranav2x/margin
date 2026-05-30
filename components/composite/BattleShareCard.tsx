@@ -12,13 +12,15 @@ interface Props {
   sportLabel: string | null;
   myWins: number;
   oppWins: number;
-  hasUnverified: boolean;
+  // True when one or both sides had a mark outside its plausible range, so it
+  // was left out of the tally.
+  hasUncounted: boolean;
 }
 
 // Black-and-white press-clipping for a head-to-head, mirroring ShareCard.
 // Rendered on-screen and used as the view-shot capture target.
 export const BattleShareCard = forwardRef<View, Props>(function BattleShareCard(
-  { meHandle, oppHandle, sportLabel, myWins, oppWins, hasUnverified },
+  { meHandle, oppHandle, sportLabel, myWins, oppWins, hasUncounted },
   ref,
 ) {
   const { colors } = useTheme();
@@ -55,7 +57,7 @@ export const BattleShareCard = forwardRef<View, Props>(function BattleShareCard(
 
       <HairlineRule style={{ marginVertical: space[5] }} />
       <MicroLabel>
-        OFFICIAL TALLY · VERIFIED ONLY{hasUnverified ? ' · UNVERIFIED NOT COUNTED' : ''}
+        TALLY · ALL PLAUSIBLE MARKS{hasUncounted ? ' · SOME OUT OF RANGE' : ''}
       </MicroLabel>
     </View>
   );

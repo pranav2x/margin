@@ -12,6 +12,7 @@ import { HairlineRule } from '../../components/primitives/HairlineRule';
 import { Avatar } from '../../components/primitives/Avatar';
 import { PrimaryButton } from '../../components/primitives/PrimaryButton';
 import { Score } from '../../components/motion/Score';
+import { VerifiedMark } from '../../components/composite/StatLine';
 import { BattleShareCard } from '../../components/composite/BattleShareCard';
 import {
   SPORT_LABELS,
@@ -41,7 +42,10 @@ interface CompRow {
   metric: MetricRow;
   mine: PlayerStat;
   theirs: PlayerStat;
-  official: boolean;
+  // A comparison counts when both marks are in their plausible range. It's
+  // "verified" (badged) only when both sides are peer-verified.
+  bothPlausible: boolean;
+  bothVerified: boolean;
   winner: Winner;
 }
 
@@ -62,7 +66,7 @@ function OpponentRow({ p, onPress }: { p: MyProfile; onPress: () => void }) {
   );
 }
 
-function ComparisonRow({ row, showWinner }: { row: CompRow; showWinner: boolean }) {
+function ComparisonRow({ row, showWinner, verified }: { row: CompRow; showWinner: boolean; verified?: boolean }) {
   const unit = row.metric.unit;
   const meTone = showWinner && row.winner === 'me' ? 'ink' : 'ash';
   const oppTone = showWinner && row.winner === 'opp' ? 'ink' : 'ash';
@@ -77,6 +81,11 @@ function ComparisonRow({ row, showWinner }: { row: CompRow; showWinner: boolean 
         <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: space[2] }}>
           <Txt variant="bodySm" style={{ textAlign: 'center' }}>{row.metric.label}</Txt>
           {unit ? <MicroLabel style={{ marginTop: 2 }}>{unit}</MicroLabel> : null}
+          {verified && (
+            <View style={{ marginTop: space[2], alignItems: 'center' }}>
+              <VerifiedMark verified />
+            </View>
+          )}
           {showWinner && row.winner === 'tie' && <MicroLabel tone="ink" style={{ marginTop: space[1] }}>TIE</MicroLabel>}
         </View>
 
@@ -121,19 +130,32 @@ export default function BattlesScreen() {
     for (const mine of myStats) {
       const theirs = byMetric.get(mine.metric.id);
       if (!theirs) continue;
-      const official =
-        mine.verified && mine.is_plausible !== false && theirs.verified && theirs.is_plausible !== false;
-      rows.push({ metric: mine.metric, mine, theirs, official, winner: decideWinner(mine.metric, mine, theirs) });
+      const bothPlausible = mine.is_plausible !== false && theirs.is_plausible !== false;
+      const bothVerified = mine.verified && theirs.verified;
+      rows.push({
+        metric: mine.metric,
+        mine,
+        theirs,
+        bothPlausible,
+        bothVerified,
+        winner: decideWinner(mine.metric, mine, theirs),
+      });
     }
     rows.sort((a, b) => a.metric.sort_order - b.metric.sort_order);
     return rows;
   }, [myStats, oppStats]);
 
-  const officialRows = comparison.filter((r) => r.official);
-  const notCounted = comparison.filter((r) => !r.official);
-  const myWins = officialRows.filter((r) => r.winner === 'me').length;
-  const oppWins = officialRows.filter((r) => r.winner === 'opp').length;
-  const ties = officialRows.filter((r) => r.winner === 'tie').length;
+  // Primary tally: every plausible shared mark counts (verified or not), so
+  // battles aren't stuck 0–0. Implausible marks stay out. The verified-only
+  // sub-tally is the subset where both sides are peer-verified.
+  const countedRows = comparison.filter((r) => r.bothPlausible);
+  const notCounted = comparison.filter((r) => !r.bothPlausible);
+  const verifiedRows = countedRows.filter((r) => r.bothVerified);
+  const myWins = countedRows.filter((r) => r.winner === 'me').length;
+  const oppWins = countedRows.filter((r) => r.winner === 'opp').length;
+  const ties = countedRows.filter((r) => r.winner === 'tie').length;
+  const vMyWins = verifiedRows.filter((r) => r.winner === 'me').length;
+  const vOppWins = verifiedRows.filter((r) => r.winner === 'opp').length;
 
   const sportLabel = mySport ? SPORT_LABELS[mySport as Sport] ?? null : null;
 
@@ -269,13 +291,20 @@ export default function BattlesScreen() {
           </View>
           <View style={{ alignItems: 'center', paddingHorizontal: space[4] }}>
             <Score value={`${myWins}–${oppWins}`} size="xl" />
-            <MicroLabel style={{ marginTop: space[2] }}>{ties > 0 ? `${ties} TIE${ties > 1 ? 'S' : ''}` : 'OFFICIAL'}</MicroLabel>
+            <MicroLabel style={{ marginTop: space[2] }}>{ties > 0 ? `${ties} TIE${ties > 1 ? 'S' : ''}` : 'ALL MARKS'}</MicroLabel>
           </View>
           <View style={{ flex: 1, alignItems: 'center' }}>
             <Avatar uri={opp?.avatar_url ?? undefined} size={56} />
             <Txt variant="bodySm" numberOfLines={1} style={{ marginTop: space[2], fontFamily: 'GeistMono' }}>@{opp?.handle ?? ''}</Txt>
           </View>
         </View>
+
+        {/* Verified-only sub-tally (the subset both sides have peer-verified). */}
+        {verifiedRows.length > 0 && (
+          <View style={{ alignItems: 'center', paddingTop: space[3] }}>
+            <MicroLabel>{`VERIFIED ONLY · ${vMyWins}–${vOppWins}`}</MicroLabel>
+          </View>
+        )}
 
         {oppProfileQ.isLoading || oppStatsQ.isLoading ? (
           <View style={{ paddingVertical: space[8], alignItems: 'center' }}>
@@ -292,20 +321,21 @@ export default function BattlesScreen() {
           </View>
         ) : (
           <>
-            {/* Official comparison */}
+            {/* Every plausible shared mark counts. Rows verified on both sides
+                are badged; the sub-tally above tracks the verified-only score. */}
             <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8], paddingBottom: space[2] }}>
-              <MicroLabel>OFFICIAL · VERIFIED ONLY</MicroLabel>
+              <MicroLabel>ALL MARKS · BOTH IN RANGE</MicroLabel>
             </View>
             <HairlineRule />
-            {officialRows.length === 0 ? (
+            {countedRows.length === 0 ? (
               <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[5] }}>
-                <Txt variant="bodyLg" tone="ash">Nothing verified on both sides yet.</Txt>
+                <Txt variant="bodyLg" tone="ash">No in-range marks on the same metric yet.</Txt>
               </View>
             ) : (
-              officialRows.map((row, i) => (
+              countedRows.map((row, i) => (
                 <View key={row.metric.id}>
-                  <ComparisonRow row={row} showWinner />
-                  {i < officialRows.length - 1 && <HairlineRule />}
+                  <ComparisonRow row={row} showWinner verified={row.bothVerified} />
+                  {i < countedRows.length - 1 && <HairlineRule />}
                 </View>
               ))
             )}
@@ -319,16 +349,17 @@ export default function BattlesScreen() {
                 sportLabel={sportLabel}
                 myWins={myWins}
                 oppWins={oppWins}
-                hasUnverified={notCounted.length > 0}
+                hasUncounted={notCounted.length > 0}
               />
               <PrimaryButton label="SHARE BATTLE" variant="ghost" full onPress={share} style={{ marginTop: space[4] }} />
             </View>
 
-            {/* Not counted (unverified / implausible) */}
+            {/* Not counted: a mark is outside its plausible range on one or both
+                sides, so it stays out of the tally. */}
             {notCounted.length > 0 && (
               <>
                 <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8], paddingBottom: space[2] }}>
-                  <MicroLabel>UNVERIFIED · NOT COUNTED</MicroLabel>
+                  <MicroLabel>OUTSIDE EXPECTED RANGE · NOT COUNTED</MicroLabel>
                 </View>
                 <HairlineRule />
                 {notCounted.map((row, i) => (
