@@ -289,37 +289,25 @@ export default function YouScreen() {
           <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8] }}>
             <PrimaryButton label="ADD A STAT" full onPress={() => sheetRef.current?.present()} />
           </View>
+
+          <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[6] }}>
+            {signOutError ? (
+              <Txt variant="bodySm" tone="ash" style={{ marginBottom: space[2], textAlign: 'center' }}>
+                {signOutError}
+              </Txt>
+            ) : null}
+            <PrimaryButton
+              label="SIGN OUT"
+              variant="ghost"
+              full
+              disabled={isSigningOut}
+              onPress={handleSignOut}
+            />
+          </View>
         </ScrollView>
 
         <StatEntrySheet ref={sheetRef} ageBand={profile?.age_band ?? null} metrics={catalogQ.data ?? []} onSaved={onSaved} />
         <ProfileEditSheet ref={editRef} profile={profile ?? null} onSaved={onProfileSaved} />
-
-        {/* Sign-out footer */}
-        <View
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            paddingHorizontal: SCREEN_PADDING,
-            paddingTop: space[3],
-            paddingBottom: insets.bottom + space[3],
-            backgroundColor: colors.paper,
-          }}
-        >
-          {signOutError ? (
-            <Txt variant="bodySm" tone="ash" style={{ marginBottom: space[2], textAlign: 'center' }}>
-              {signOutError}
-            </Txt>
-          ) : null}
-          <PrimaryButton
-            label="SIGN OUT"
-            variant="ghost"
-            full
-            disabled={isSigningOut}
-            onPress={handleSignOut}
-          />
-        </View>
       </View>
     </BottomSheetModalProvider>
   );
