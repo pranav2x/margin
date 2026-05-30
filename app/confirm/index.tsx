@@ -201,7 +201,7 @@ export default function SchoolConfirmFeed() {
               alignItems: 'center',
             }}
           >
-            <AppIcon name="Trophy" size={48} tone="ash" />
+            <AppIcon name="Check" size={48} tone="ash" />
             <Txt
               variant="display4"
               weight="bold"

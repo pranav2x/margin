@@ -4,12 +4,12 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { Check } from 'lucide-react-native';
 
 import { Txt } from '../../components/primitives/Text';
 import { MicroLabel } from '../../components/primitives/MicroLabel';
 import { HairlineRule } from '../../components/primitives/HairlineRule';
 import { PrimaryButton } from '../../components/primitives/PrimaryButton';
+import { AppIcon } from '../../components/primitives/AppIcon';
 import { useTheme, space, SCREEN_PADDING } from '../../theme';
 import { supabase } from '../../lib/supabase';
 
@@ -38,7 +38,7 @@ function Checkbox({ checked }: { checked: boolean }) {
         justifyContent: 'center',
       }}
     >
-      {checked && <Check size={16} color={colors.paper} strokeWidth={3} />}
+      {checked && <AppIcon name="Check" size={16} tone="paper" />}
     </View>
   );
 }
@@ -134,7 +134,7 @@ export default function Eula() {
             }}
           >
             <View style={{ paddingTop: 2 }}>
-              <Check size={20} color={colors.ember} strokeWidth={2.5} />
+              <AppIcon name="Check" size={20} tone="ember" />
             </View>
             <Txt variant="bodyLg" style={{ flex: 1 }}>
               {rule}

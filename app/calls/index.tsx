@@ -110,7 +110,7 @@ function StatusBadge({ status }: { status: Exclude<CallStatus, 'open'> }) {
         paddingHorizontal: space[2],
         paddingVertical: space[1],
         borderRadius: 4,
-        backgroundColor: isWon ? colors.surface : colors.surface,
+        backgroundColor: colors.surface,
       }}
     >
       <AppIcon name={isWon ? 'Trophy' : 'X'} size={14} tone={isWon ? 'ember' : 'ash'} />

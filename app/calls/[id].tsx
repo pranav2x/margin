@@ -341,7 +341,7 @@ export default function CallDetail() {
                   timestamp={c.timestamp}
                   size="sm"
                 />
-                <Txt variant="body" style={{ marginTop: space[3], paddingLeft: 32 + space[3] }}>
+                <Txt variant="body" style={{ marginTop: space[3], paddingLeft: space[8] + space[3] }}>
                   {c.body}
                 </Txt>
               </View>

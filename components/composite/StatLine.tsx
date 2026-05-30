@@ -1,8 +1,8 @@
-import { View, Pressable, Text } from 'react-native';
+import { View, Pressable } from 'react-native';
 import { Txt } from '../primitives/Text';
 import { MicroLabel } from '../primitives/MicroLabel';
 import { Score } from '../motion/Score';
-import { useTheme, space, SCREEN_PADDING, fonts } from '../../theme';
+import { useTheme, space, SCREEN_PADDING } from '../../theme';
 import { formatStatValue, type PlayerStat } from '../../lib/hooks/usePlayerProfile';
 
 // Verified is a small filled-ink pill; unverified is a hairline outline. No
@@ -25,19 +25,12 @@ export function VerifiedMark({ verified, inverted }: { verified: boolean; invert
         alignSelf: 'flex-start',
       }}
     >
-      <Text
-        allowFontScaling={false}
-        style={{
-          fontFamily: fonts.bold,
-          fontSize: 10,
-          lineHeight: 14,
-          letterSpacing: 1.2,
-          textTransform: 'uppercase',
-          color: verified ? onBase : base,
-        }}
+      <Txt
+        variant="micro"
+        style={{ color: verified ? onBase : base }}
       >
         {verified ? 'Verified' : 'Unverified'}
-      </Text>
+      </Txt>
     </View>
   );
 }

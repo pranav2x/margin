@@ -1,7 +1,7 @@
 import { View, StyleSheet } from 'react-native';
-import { Flame, Snowflake } from 'lucide-react-native';
 import { Score } from '../motion/Score';
 import { MicroLabel } from '../primitives/MicroLabel';
+import { AppIcon } from '../primitives/AppIcon';
 import { useTheme, space } from '../../theme';
 import type { StreakData } from '../../lib/hooks/useStreak';
 
@@ -21,7 +21,7 @@ export function StreakBlock({ streak }: Props) {
   return (
     <View accessibilityRole="summary" accessibilityLabel={`${streak.current} day streak`}>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Flame size={28} color={colors.ember} strokeWidth={2} fill={colors.ember} />
+        <AppIcon name="Flame" size={28} tone="ember" filled />
         {/* Inter tabular numeral — ember, tabular so 9 → 10 never shifts. */}
         <Score value={streak.current} size="lg" tone="ember" style={{ marginLeft: space[2] }} />
         <MicroLabel style={{ marginLeft: space[3] }}>DAY STREAK</MicroLabel>
@@ -42,7 +42,7 @@ export function StreakBlock({ streak }: Props) {
                 borderColor: colors.fog,
               }}
             >
-              {d.state === 'frozen' ? <Snowflake size={14} color={colors.ash} strokeWidth={2} /> : null}
+              {d.state === 'frozen' ? <AppIcon name="Snowflake" size={14} tone="ash" /> : null}
             </View>
             <MicroLabel tone={d.isToday ? 'ink' : 'ash'}>{d.label}</MicroLabel>
           </View>

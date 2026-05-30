@@ -3,6 +3,7 @@ import {
   Bell,
   Bookmark,
   Camera,
+  Check,
   ChevronLeft,
   ChevronRight,
   Eye,
@@ -43,6 +44,7 @@ export const Icons = {
   Flame,
   Snowflake,
   X,
+  Check,
   // Phase 2 — Boards/Battles/Calls/Clips/Create chrome
   Plus,
   Heart,

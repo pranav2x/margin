@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { Flame } from 'lucide-react-native';
 
 import { Txt } from '../../components/primitives/Text';
 import { MicroLabel } from '../../components/primitives/MicroLabel';
@@ -12,6 +11,7 @@ import { HairlineRule } from '../../components/primitives/HairlineRule';
 import { PrimaryButton } from '../../components/primitives/PrimaryButton';
 import { Card } from '../../components/primitives/Card';
 import { StatBlock } from '../../components/primitives/StatBlock';
+import { AppIcon } from '../../components/primitives/AppIcon';
 import { useTheme, space, SCREEN_PADDING, type, fonts } from '../../theme';
 import { supabase } from '../../lib/supabase';
 import { recordActivity } from '../../lib/hooks/useStreak';
@@ -259,12 +259,7 @@ export default function Onboarding() {
           }}
         >
           {/* Sanctioned ember celebration: the flame + Day 1 numeral. */}
-          <Flame
-            size={56}
-            color={colors.ember}
-            strokeWidth={2}
-            fill={colors.ember}
-          />
+          <AppIcon name="Flame" size={56} tone="ember" filled />
           <View style={{ marginTop: space[5] }}>
             <StatBlock
               value="1"

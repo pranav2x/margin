@@ -1,9 +1,9 @@
 import { forwardRef } from 'react';
 import { View } from 'react-native';
-import { Flame } from 'lucide-react-native';
 import { Txt } from '../primitives/Text';
 import { MicroLabel } from '../primitives/MicroLabel';
 import { HairlineRule } from '../primitives/HairlineRule';
+import { AppIcon } from '../primitives/AppIcon';
 import { Score } from '../motion/Score';
 import { useTheme, space } from '../../theme';
 
@@ -46,7 +46,7 @@ export const StreakMilestoneCard = forwardRef<View, Props>(function StreakMilest
 
       {/* The celebration: ember flame + ember day count (Inter tabular). */}
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Flame size={56} color={colors.ember} strokeWidth={2} fill={colors.ember} />
+        <AppIcon name="Flame" size={56} tone="ember" filled />
         <Score value={days} size="xl" tone="ember" style={{ marginLeft: space[3] }} />
       </View>
       <Txt variant="display3" style={{ marginTop: space[3] }}>
