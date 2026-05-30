@@ -20,6 +20,7 @@ import { StatLine, VerifiedMark } from '../../components/composite/StatLine';
 import { ShareCard, type HeadlineStat } from '../../components/composite/ShareCard';
 import { StatEntrySheet, type StatEntrySheetRef } from '../../components/composite/StatEntrySheet';
 import { ProfileEditSheet, type ProfileEditSheetRef } from '../../components/composite/ProfileEditSheet';
+import { StreakBlock } from '../../components/composite/StreakBlock';
 import {
   SPORTS,
   SPORT_LABELS,
@@ -30,6 +31,7 @@ import {
   type PlayerStat,
   type Sport,
 } from '../../lib/hooks/usePlayerProfile';
+import { useStreak } from '../../lib/hooks/useStreak';
 import { useTheme, space, SCREEN_PADDING } from '../../theme';
 import { signOut } from '../../lib/auth';
 
@@ -42,6 +44,7 @@ export default function YouScreen() {
   const profileQ = useMyProfile();
   const statsQ = useMyStats();
   const catalogQ = useMetricCatalog();
+  const streakQ = useStreak();
 
   const sheetRef = useRef<StatEntrySheetRef>(null);
   const editRef = useRef<ProfileEditSheetRef>(null);
@@ -63,6 +66,7 @@ export default function YouScreen() {
 
   const profile = profileQ.data;
   const stats = useMemo(() => statsQ.data ?? [], [statsQ.data]);
+  const streak = streakQ.data ?? null;
 
   const grouped = useMemo(() => {
     const map = new Map<string, PlayerStat[]>();
@@ -164,9 +168,14 @@ export default function YouScreen() {
             </View>
           </View>
 
-          {/* Phase 6 reserves the rest of the app's ember accents for this area:
-              an active streak flame beside the headline number and milestone
-              celebrations. Not built yet — left monochrome; don't fake the accent. */}
+          {/* Active streak — the flame numeral is a sanctioned ember accent; the
+              7-day strip stays monochrome. Hidden when there's no live streak so
+              a lapsed athlete is never guilted and the accent is never faked. */}
+          {streak && streak.current >= 1 && (
+            <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[7] }}>
+              <StreakBlock streak={streak} />
+            </View>
+          )}
           {/* Headline number */}
           {top ? (
             <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[7] }}>
