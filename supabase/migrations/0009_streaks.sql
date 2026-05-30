@@ -72,11 +72,13 @@ revoke insert, update, delete on public.streaks       from anon, authenticated;
 --      * gap = today - last_active_day:
 --          <= 0  already counted today          -> run unchanged (idempotent);
 --          = 1   consecutive day                 -> run + 1;
---          = 2   exactly one missed day, freezes -> bridge: run + 1, spend a freeze;
+--          = 2   exactly one missed day, freezes -> bridge: run + 1, spend a freeze,
+--                and mark the missed day frozen (a retroactive snowflake);
 --          else  two+ missed days (or no freeze) -> reset to 1;
 --      * longest_len tracks the high-water mark.
---    The freeze is silent — it is pure server logic with no failure-moment
---    signal to the client.
+--    The freeze is silent — pure server logic with no failure-moment signal. Its
+--    only trace is the frozen activity_days row, which the strip later reads as a
+--    snowflake; there is never a popup at the missed-day moment.
 -- ------------------------------------------------------------
 create or replace function public.record_activity()
 returns void
@@ -123,8 +125,13 @@ begin
     v_current := v_current + 1;
   elsif v_gap = 2 and v_freezes > 0 then
     -- One missed day, a freeze is available: bridge it and spend the freeze.
+    -- Mark the bridged day frozen so the 7-day strip shows a snowflake there
+    -- retroactively — the only trace a freeze leaves, and never a popup.
     v_freezes := v_freezes - 1;
     v_current := v_current + 1;
+    insert into public.activity_days (profile_id, day, frozen)
+    values (v_caller, v_today - 1, true)
+    on conflict (profile_id, day) do nothing;
   else
     -- Two or more missed days, or no freeze left: the run resets to today.
     v_current := 1;
