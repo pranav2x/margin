@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { View, ScrollView, ActivityIndicator } from 'react-native';
+import { View, ScrollView, ActivityIndicator, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '../../lib/supabase';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import * as Haptics from 'expo-haptics';
@@ -21,6 +22,12 @@ import { StatEntrySheet, type StatEntrySheetRef } from '../../components/composi
 import { ProfileEditSheet, type ProfileEditSheetRef } from '../../components/composite/ProfileEditSheet';
 import { StreakBlock } from '../../components/composite/StreakBlock';
 import { StreakMilestoneCard } from '../../components/composite/StreakMilestoneCard';
+import {
+  LeaderboardRow,
+  type LeaderboardRowData,
+} from '../../components/composite/LeaderboardRow';
+import { VerifiedBadge, tierOf, type VerifiedTier } from '../../components/primitives/VerifiedBadge';
+import { AppIcon } from '../../components/primitives/AppIcon';
 import {
   SPORTS,
   SPORT_LABELS,
@@ -136,6 +143,61 @@ export default function YouScreen() {
   const totalCount = stats.length;
   const streakDays = streak?.current ?? 0;
 
+  // Identity-level tier shown next to the handle. Highest tier the user has
+  // earned across any stat — event > video > unverified. Floors to unverified
+  // when the profile has no stats yet.
+  const identityTier: VerifiedTier = useMemo(() => {
+    let best: VerifiedTier = 'unverified';
+    for (const s of stats) {
+      const t = tierOf(s.verified, s.verification_method);
+      if (t === 'event') return 'event';
+      if (t === 'video') best = 'video';
+    }
+    return best;
+  }, [stats]);
+
+  // "vs. your school" — three rows of the school leaderboard on the user's
+  // primary metric. Uses `isCurrentUser` to highlight the user's row.
+  const primaryMetricForSport = useMemo(() => {
+    const sport = profile?.primary_sport;
+    if (!sport) return null;
+    const list = (catalogQ.data ?? [])
+      .filter((m) => m.sport === sport)
+      .sort((a, b) => a.sort_order - b.sort_order);
+    return list[0] ?? null;
+  }, [catalogQ.data, profile?.primary_sport]);
+
+  const schoolBoardQ = useQuery({
+    queryKey: [
+      'profile-vs-school',
+      profile?.id ?? null,
+      profile?.school_id ?? null,
+      profile?.primary_sport ?? null,
+      primaryMetricForSport?.key ?? null,
+    ],
+    enabled:
+      !!profile?.id && !!profile?.school_id && !!primaryMetricForSport?.key,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('leaderboard', {
+        p_sport: profile!.primary_sport!,
+        p_metric_key: primaryMetricForSport!.key,
+        p_scope: 'school',
+        p_only_verified: false,
+        p_limit: 5,
+      });
+      if (error) throw error;
+      return (data as Array<{
+        rank: number;
+        profile_id: string;
+        handle: string;
+        school_name: string | null;
+        value: number;
+        verified: boolean;
+        verification_method: string;
+      }> | null) ?? [];
+    },
+  });
+
   const share = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
@@ -204,14 +266,24 @@ export default function YouScreen() {
             >
               {profile?.display_name ?? `@${handle}`}
             </Txt>
-            <Txt
-              variant="bodyLg"
-              tone="ash"
-              weight="semibold"
-              style={{ marginTop: space[1], textAlign: 'center', fontVariant: ['tabular-nums'] }}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: space[2],
+                marginTop: space[1],
+              }}
             >
-              @{handle}
-            </Txt>
+              <Txt
+                variant="bodyLg"
+                tone="ash"
+                weight="semibold"
+                style={{ textAlign: 'center', fontVariant: ['tabular-nums'] }}
+              >
+                @{handle}
+              </Txt>
+              <VerifiedBadge tier={identityTier} />
+            </View>
             {metaLine.length > 0 && (
               <Txt
                 variant="bodySm"
@@ -368,6 +440,98 @@ export default function YouScreen() {
               ))}
             </View>
           )}
+
+          {/* PRs — derived from the user's own stats: the headline pair we
+              already promote upstairs. Rendered as small Cards so the row
+              reads as receipts, not as more stat lines. */}
+          {headline.length > 0 ? (
+            <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8] }}>
+              <MicroLabel style={{ marginBottom: space[3] }}>PERSONAL RECORDS</MicroLabel>
+              <View style={{ flexDirection: 'row', gap: space[3] }}>
+                {headline.map((s) => (
+                  <Card key={s.id} tone="surface" style={{ flex: 1, padding: space[3] }}>
+                    <MicroLabel>{s.metric.label.toUpperCase()}</MicroLabel>
+                    <Txt
+                      variant="display4"
+                      weight="bold"
+                      style={{ marginTop: space[2], fontVariant: ['tabular-nums'] }}
+                    >
+                      {formatStatValue(s.value, s.metric.unit)}
+                    </Txt>
+                    <View style={{ marginTop: space[2] }}>
+                      <VerifiedBadge tier={tierOf(s.verified, s.verification_method)} />
+                    </View>
+                  </Card>
+                ))}
+              </View>
+            </View>
+          ) : null}
+
+          {/* vs. your school — three rows of the user's school leaderboard
+              on their primary metric, with their own row highlighted. */}
+          {profile?.school_id && (schoolBoardQ.data?.length ?? 0) > 0 ? (
+            <View style={{ paddingTop: space[8] }}>
+              <View style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space[3] }}>
+                <MicroLabel>VS. YOUR SCHOOL</MicroLabel>
+                {primaryMetricForSport ? (
+                  <Txt variant="bodySm" tone="ash" style={{ marginTop: space[1] }}>
+                    {primaryMetricForSport.label}
+                    {primaryMetricForSport.unit ? ` (${primaryMetricForSport.unit})` : ''}
+                  </Txt>
+                ) : null}
+              </View>
+              <HairlineRule />
+              {schoolBoardQ.data!.slice(0, 5).map((r, i, arr) => {
+                const data: LeaderboardRowData = {
+                  rank: r.rank,
+                  handle: r.handle,
+                  school: r.school_name,
+                  value: formatStatValue(r.value, primaryMetricForSport?.unit ?? null),
+                  tier: tierOf(r.verified, r.verification_method),
+                };
+                return (
+                  <View key={r.profile_id}>
+                    <LeaderboardRow
+                      row={data}
+                      unit={primaryMetricForSport?.unit ?? null}
+                      isCurrentUser={r.profile_id === profile?.id}
+                      onPress={() => router.push(`/player/${r.profile_id}` as never)}
+                    />
+                    {i < arr.length - 1 ? <HairlineRule /> : null}
+                  </View>
+                );
+              })}
+            </View>
+          ) : null}
+
+          {/* Clips grid — placeholder cells route into the Clips tab. Wave
+              2.x replaces these with the user's own uploaded clips once the
+              clips table is live. */}
+          <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8] }}>
+            <MicroLabel style={{ marginBottom: space[3] }}>CLIPS</MicroLabel>
+            <View style={{ flexDirection: 'row', gap: space[2] }}>
+              {[0, 1, 2].map((i) => (
+                <Pressable
+                  key={i}
+                  onPress={() => router.push('/(tabs)/clips' as never)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open clips"
+                  style={{
+                    flex: 1,
+                    aspectRatio: 9 / 16,
+                    backgroundColor: colors.surface,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: colors.fog,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <AppIcon name="Video" size={20} tone="ash" />
+                </Pressable>
+              ))}
+            </View>
+          </View>
 
           {/* Bottom CTA — the only filled ember button on the screen. */}
           <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8] }}>
