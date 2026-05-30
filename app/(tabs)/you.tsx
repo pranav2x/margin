@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { View, ScrollView, ActivityIndicator } from 'react-native';
+import { View, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
@@ -17,6 +17,7 @@ import { Score } from '../../components/motion/Score';
 import { StatLine, VerifiedMark } from '../../components/composite/StatLine';
 import { ShareCard, type HeadlineStat } from '../../components/composite/ShareCard';
 import { StatEntrySheet, type StatEntrySheetRef } from '../../components/composite/StatEntrySheet';
+import { ProfileEditSheet, type ProfileEditSheetRef } from '../../components/composite/ProfileEditSheet';
 import {
   SPORTS,
   SPORT_LABELS,
@@ -40,6 +41,7 @@ export default function YouScreen() {
   const catalogQ = useMetricCatalog();
 
   const sheetRef = useRef<StatEntrySheetRef>(null);
+  const editRef = useRef<ProfileEditSheetRef>(null);
   const cardRef = useRef<View>(null);
 
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -91,6 +93,7 @@ export default function YouScreen() {
   const handle = profile?.handle ?? 'you';
   const sportLabel = profile?.primary_sport ? SPORT_LABELS[profile.primary_sport as Sport] ?? null : null;
   const onSaved = () => queryClient.invalidateQueries({ queryKey: ['my-stats'] });
+  const onProfileSaved = () => queryClient.invalidateQueries({ queryKey: ['my-profile'] });
 
   const share = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -133,6 +136,16 @@ export default function YouScreen() {
               @{handle}
             </Txt>
             {metaLine.length > 0 && <MicroLabel style={{ marginTop: space[4] }}>{metaLine}</MicroLabel>}
+
+            <Pressable
+              onPress={() => editRef.current?.present()}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Edit your profile"
+              style={{ marginTop: space[5], minHeight: 44, justifyContent: 'center' }}
+            >
+              <MicroLabel tone="ink">EDIT PROFILE</MicroLabel>
+            </Pressable>
           </View>
 
           {/* Headline number */}
@@ -197,6 +210,7 @@ export default function YouScreen() {
         </ScrollView>
 
         <StatEntrySheet ref={sheetRef} ageBand={profile?.age_band ?? null} metrics={catalogQ.data ?? []} onSaved={onSaved} />
+        <ProfileEditSheet ref={editRef} profile={profile ?? null} onSaved={onProfileSaved} />
 
         {/* Sign-out footer */}
         <View
