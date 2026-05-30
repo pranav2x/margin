@@ -23,7 +23,7 @@ import {
 import { useTheme, space, SCREEN_PADDING } from '../../theme';
 
 interface LbRow {
-  rank: number | null;
+  rank: number;
   profile_id: string;
   handle: string;
   school_name: string | null;
@@ -40,33 +40,28 @@ const SCOPES = [
 ] as const;
 type Scope = (typeof SCOPES)[number]['key'];
 
-type ListItem = { kind: 'row'; row: LbRow } | { kind: 'divider' };
-
 function LeaderboardRow({ row, unit, onPress }: { row: LbRow; unit: string | null; onPress: () => void }) {
-  const deemph = !row.ranked;
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${row.ranked ? `Rank ${row.rank}, ` : ''}@${row.handle}, ${formatStatValue(row.value, unit)} ${unit ?? ''}, ${row.verified ? 'verified' : 'unverified'}`}
+      accessibilityLabel={`Rank ${row.rank}, @${row.handle}, ${formatStatValue(row.value, unit)} ${unit ?? ''}, ${row.verified ? 'verified' : 'unverified'}`}
       style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: SCREEN_PADDING, paddingVertical: space[4], minHeight: 56 }}
     >
       {/* Rank — fixed width so value/length never shifts the row. */}
       <View style={{ width: 40, alignItems: 'flex-start' }}>
-        {row.ranked && row.rank != null ? (
-          <Score value={`${row.rank}`} size="sm" />
-        ) : (
-          <MicroLabel>—</MicroLabel>
-        )}
+        <Score value={`${row.rank}`} size="sm" />
       </View>
 
       <View style={{ flex: 1, paddingHorizontal: space[3] }}>
-        <Txt variant="bodyLg" tone={deemph ? 'ash' : 'ink'}>@{row.handle}</Txt>
+        <Txt variant="bodyLg">@{row.handle}</Txt>
         {row.school_name ? <MicroLabel style={{ marginTop: 2 }}>{row.school_name}</MicroLabel> : null}
       </View>
 
+      {/* Value + the monochrome verified/unverified badge — the mark is the
+          differentiator now that unverified marks also rank. */}
       <View style={{ alignItems: 'flex-end', minWidth: 76 }}>
-        <Score value={formatStatValue(row.value, unit)} size="sm" tone={deemph ? 'ash' : 'ink'} />
+        <Score value={formatStatValue(row.value, unit)} size="sm" />
         <View style={{ marginTop: space[2] }}>
           <VerifiedMark verified={row.verified} />
         </View>
@@ -83,7 +78,8 @@ export default function BoardsScreen() {
   const [sport, setSport] = useState<Sport>('football');
   const [scope, setScope] = useState<Scope>('school');
   const [metricKey, setMetricKey] = useState<string>('');
-  const [showUnverified, setShowUnverified] = useState(false);
+  // Default view = all plausible marks. The toggle narrows to verified only.
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
 
   const catalogQ = useMetricCatalog();
   const metricsForSport = useMemo(
@@ -100,14 +96,14 @@ export default function BoardsScreen() {
   }, [metricsForSport, metricKey]);
 
   const boardQ = useQuery({
-    queryKey: ['leaderboard', sport, metricKey, scope, showUnverified],
+    queryKey: ['leaderboard', sport, metricKey, scope, verifiedOnly],
     enabled: !!metricKey,
     queryFn: async (): Promise<LbRow[]> => {
       const { data, error } = await supabase.rpc('leaderboard', {
         p_sport: sport,
         p_metric_key: metricKey,
         p_scope: scope,
-        p_only_verified: !showUnverified,
+        p_only_verified: verifiedOnly,
         p_limit: 100,
       });
       if (error) throw error;
@@ -130,16 +126,6 @@ export default function BoardsScreen() {
   });
 
   const rows = boardQ.data ?? [];
-  const listData = useMemo<ListItem[]>(() => {
-    const ranked = rows.filter((r) => r.ranked);
-    const unranked = rows.filter((r) => !r.ranked);
-    return [
-      ...ranked.map((row) => ({ kind: 'row', row }) as ListItem),
-      ...(unranked.length > 0 ? [{ kind: 'divider' } as ListItem] : []),
-      ...unranked.map((row) => ({ kind: 'row', row }) as ListItem),
-    ];
-  }, [rows]);
-
   const scopeMeta = SCOPES.find((s) => s.key === scope)!;
   const pct = pctQ.data;
 
@@ -213,11 +199,11 @@ export default function BoardsScreen() {
         <Pressable
           onPress={() => {
             Haptics.selectionAsync();
-            setShowUnverified((v) => !v);
+            setVerifiedOnly((v) => !v);
           }}
           accessibilityRole="switch"
-          accessibilityState={{ checked: showUnverified }}
-          accessibilityLabel="Show unverified entries"
+          accessibilityState={{ checked: verifiedOnly }}
+          accessibilityLabel="Show verified marks only"
           hitSlop={8}
           style={{ flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: 44 }}
         >
@@ -227,10 +213,10 @@ export default function BoardsScreen() {
               height: 18,
               borderWidth: 1,
               borderColor: colors.ink,
-              backgroundColor: showUnverified ? colors.ink : 'transparent',
+              backgroundColor: verifiedOnly ? colors.ink : 'transparent',
             }}
           />
-          <MicroLabel tone="ink">SHOW UNVERIFIED</MicroLabel>
+          <MicroLabel tone="ink">VERIFIED ONLY</MicroLabel>
         </Pressable>
       </View>
 
@@ -241,35 +227,25 @@ export default function BoardsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top }}>
       <FlashList
-        data={listData}
-        keyExtractor={(item, i) => (item.kind === 'divider' ? `divider-${i}` : item.row.profile_id)}
+        data={rows}
+        keyExtractor={(item) => item.profile_id}
         ListHeaderComponent={header}
-        renderItem={({ item }) => {
-          if (item.kind === 'divider') {
-            return (
-              <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[6], paddingBottom: space[2] }}>
-                <HairlineRule />
-                <MicroLabel style={{ marginTop: space[4] }}>UNVERIFIED · NOT RANKED</MicroLabel>
-              </View>
-            );
-          }
-          return (
-            <LeaderboardRow
-              row={item.row}
-              unit={currentMetric?.unit ?? null}
-              onPress={() => router.push(`/player/${item.row.profile_id}` as never)}
-            />
-          );
-        }}
+        renderItem={({ item }) => (
+          <LeaderboardRow
+            row={item}
+            unit={currentMetric?.unit ?? null}
+            onPress={() => router.push(`/player/${item.profile_id}` as never)}
+          />
+        )}
         ItemSeparatorComponent={() => <HairlineRule />}
         ListEmptyComponent={
           !boardQ.isLoading ? (
             <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[10], alignItems: 'flex-start' }}>
               <Txt variant="display4" italic tone="ash" style={{ fontSize: 20, fontFamily: 'InstrumentSerifItalic' }}>
-                No ranked marks yet.
+                {verifiedOnly ? 'No verified marks yet.' : 'No marks here yet.'}
               </Txt>
               <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
-                Be the first verified name on this board.
+                {verifiedOnly ? 'Turn off verified-only to see self-reported marks.' : 'Be the first name on this board.'}
               </Txt>
             </View>
           ) : null
