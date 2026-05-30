@@ -18,6 +18,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_days: {
+        Row: {
+          created_at: string
+          day: string
+          frozen: boolean
+          profile_id: string
+        }
+        Insert: {
+          created_at?: string
+          day: string
+          frozen?: boolean
+          profile_id: string
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          frozen?: boolean
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_days_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blocks: {
         Row: {
           blocked_id: string
@@ -374,6 +403,41 @@ export type Database = {
           },
         ]
       }
+      streaks: {
+        Row: {
+          current_len: number
+          freezes: number
+          last_active_day: string | null
+          longest_len: number
+          profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          current_len?: number
+          freezes?: number
+          last_active_day?: string | null
+          longest_len?: number
+          profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          current_len?: number
+          freezes?: number
+          last_active_day?: string | null
+          longest_len?: number
+          profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "streaks_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       verification_requests: {
         Row: {
           created_at: string
@@ -448,6 +512,7 @@ export type Database = {
           state: string
         }[]
       }
+      record_activity: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
