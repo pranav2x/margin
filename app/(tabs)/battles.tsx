@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { View, ScrollView, Pressable, TextInput, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import * as Haptics from 'expo-haptics';
@@ -19,9 +19,12 @@ import { AvatarMeta } from '../../components/composite/AvatarMeta';
 import { Score } from '../../components/motion/Score';
 import { VerifiedMark } from '../../components/composite/StatLine';
 import { BattleShareCard } from '../../components/composite/BattleShareCard';
+import { supabase } from '../../lib/supabase';
 import {
+  SPORTS,
   SPORT_LABELS,
   formatStatValue,
+  useMetricCatalog,
   useMyProfile,
   useMyStats,
   useNearbyOpponents,
@@ -167,16 +170,57 @@ export default function BattlesScreen() {
 
   const meQ = useMyProfile();
   const me = meQ.data;
-  const mySport = me?.primary_sport ?? null;
+  // Don't dead-end on missing primary_sport. Fall back to football so the
+  // discovery lists, search and Battle of the Week have something to query;
+  // a slim inline prompt above invites the user to set it for real.
+  const primarySportMissing = !me?.primary_sport;
+  const mySport: Sport =
+    (me?.primary_sport as Sport | undefined) ?? 'football';
 
   const myStatsQ = useMyStats();
   const myStats = useMemo(() => myStatsQ.data ?? [], [myStatsQ.data]);
 
   const [query, setQuery] = useState('');
   const [opponentId, setOpponentId] = useState<string | null>(null);
+  const [sportPromptDismissed, setSportPromptDismissed] = useState(false);
 
   const searchQ = useOpponentSearch(query, mySport, me?.id);
   const schoolQ = useSchoolOpponents(me?.school_id ?? null, mySport, me?.id);
+
+  // BATTLE OF THE WEEK — top athlete on the user's primary metric, scoped to
+  // their school when known, else everyone. Pre-populates a CTA so the tab
+  // is never an empty dead-end.
+  const catalogQ = useMetricCatalog();
+  const primaryMetricKey = useMemo(() => {
+    const list = (catalogQ.data ?? [])
+      .filter((m) => m.sport === mySport)
+      .sort((a, b) => a.sort_order - b.sort_order);
+    return list[0]?.key ?? null;
+  }, [catalogQ.data, mySport]);
+
+  const botwQ = useQuery({
+    queryKey: ['battle-of-week', mySport, primaryMetricKey, me?.school_id ?? null, me?.id ?? null],
+    enabled: !!primaryMetricKey && !!me?.id,
+    queryFn: async (): Promise<{ profile_id: string; handle: string; school: string | null } | null> => {
+      const scope = me?.school_id ? 'school' : 'everyone';
+      const { data, error } = await supabase.rpc('leaderboard', {
+        p_sport: mySport,
+        p_metric_key: primaryMetricKey,
+        p_scope: scope,
+        p_only_verified: false,
+        p_limit: 5,
+      });
+      if (error) throw error;
+      const rows = (data as Array<{
+        profile_id: string;
+        handle: string;
+        school_name: string | null;
+      }> | null) ?? [];
+      const top = rows.find((r) => r.profile_id !== me?.id);
+      if (!top) return null;
+      return { profile_id: top.profile_id, handle: top.handle, school: top.school_name };
+    },
+  });
 
   // "NEARBY" — opt-in, location-driven discovery. Tapping the CTA hits the
   // foreground permission once; coords are never stored (see useNearbySchools).
@@ -284,29 +328,110 @@ export default function BattlesScreen() {
             </Txt>
           </View>
 
-          {!mySport ? (
-            <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8], alignItems: 'center' }}>
-              <View style={{ marginBottom: space[4] }}>
-                <AppIcon name="Swords" size={48} tone="ash" />
-              </View>
-              <Txt variant="display4" weight="bold" style={{ textAlign: 'center' }}>
-                A battle needs a sport.
-              </Txt>
-              <Txt variant="body" tone="ash" style={{ marginTop: space[3], textAlign: 'center' }}>
-                Pick your primary sport so we can line up like-for-like marks.
-              </Txt>
-              <View style={{ marginTop: space[5], alignSelf: 'stretch' }}>
+          {primarySportMissing && !sportPromptDismissed ? (
+            <View style={{ paddingHorizontal: SCREEN_PADDING, marginTop: space[5] }}>
+              <Card
+                tone="surface"
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: space[3],
+                  paddingHorizontal: space[3],
+                  paddingVertical: space[3],
+                }}
+              >
+                <AppIcon name="Swords" size={16} tone="ember" />
+                <Pressable
+                  onPress={() => router.push('/(tabs)/you?edit=1' as never)}
+                  style={{ flex: 1 }}
+                  accessibilityRole="link"
+                  accessibilityLabel="Set your primary sport"
+                >
+                  <Txt variant="bodySm" weight="semibold">
+                    Set your primary sport so we line up like-for-like →
+                  </Txt>
+                  <Txt variant="micro" tone="ash" style={{ marginTop: 2 }}>
+                    Showing {SPORT_LABELS[mySport]} for now.
+                  </Txt>
+                </Pressable>
+                <Pressable
+                  onPress={() => setSportPromptDismissed(true)}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Dismiss"
+                >
+                  <AppIcon name="X" size={16} tone="ash" />
+                </Pressable>
+              </Card>
+            </View>
+          ) : null}
+
+          {/* BATTLE OF THE WEEK — the anti-dead-end CTA. Pre-populated VS
+              the top athlete at the user's school (or top everyone if no
+              school). Tap to enter the comparison view straight away. */}
+          {botwQ.data ? (
+            <View style={{ paddingHorizontal: SCREEN_PADDING, marginTop: space[5] }}>
+              <Card tone="surface" padded style={{ gap: space[4] }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <MicroLabel style={{ color: colors.ember }}>BATTLE OF THE WEEK</MicroLabel>
+                  <MicroLabel tone="ash">
+                    {me?.school_id ? 'AT YOUR SCHOOL' : 'EVERYWHERE'}
+                  </MicroLabel>
+                </View>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: space[3],
+                  }}
+                >
+                  <View style={{ flex: 1, alignItems: 'center', gap: space[2] }}>
+                    <Avatar uri={me?.avatar_url ?? undefined} size={56} />
+                    <Txt variant="bodySm" weight="semibold" numberOfLines={1}>
+                      @{me?.handle ?? 'you'}
+                    </Txt>
+                  </View>
+                  <View
+                    style={{
+                      width: 40,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Score value="VS" size="sm" tone="ember" />
+                  </View>
+                  <View style={{ flex: 1, alignItems: 'center', gap: space[2] }}>
+                    <Avatar size={56} />
+                    <Txt variant="bodySm" weight="semibold" numberOfLines={1}>
+                      @{botwQ.data.handle}
+                    </Txt>
+                    {botwQ.data.school ? (
+                      <Txt variant="micro" tone="ash" numberOfLines={1}>
+                        {botwQ.data.school}
+                      </Txt>
+                    ) : null}
+                  </View>
+                </View>
                 <PrimaryButton
-                  label="SET YOUR SPORT"
+                  label="BATTLE NOW"
                   full
                   onPress={() => {
-                    Haptics.selectionAsync();
-                    router.push('/(tabs)/you?edit=1' as never);
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    setOpponentId(botwQ.data!.profile_id);
                   }}
                 />
-              </View>
+              </Card>
             </View>
-          ) : (
+          ) : null}
+
+          {(
             <>
               {/* Search input — Strava-style pill: rounded Card with a Search
                   icon prefix. The query drives the TRENDING section below. */}
