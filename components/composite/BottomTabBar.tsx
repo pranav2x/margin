@@ -10,6 +10,7 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { Trophy, Swords, User, type LucideIcon } from 'lucide-react-native';
 import { fonts, useTheme, space } from '../../theme';
 import { HairlineRule } from '../primitives/HairlineRule';
 
@@ -19,15 +20,24 @@ const LABELS: Record<string, string> = {
   you: 'you',
 };
 
+// One calm hairline icon per tab, above the brand wordmark.
+const ICONS: Record<string, LucideIcon> = {
+  index: Trophy,
+  battles: Swords,
+  you: User,
+};
+
 interface ItemProps {
   label: string;
+  name: string;
   active: boolean;
   onPress: () => void;
   color: string;
   activeColor: string;
 }
 
-function TabItem({ label, active, onPress, color, activeColor }: ItemProps) {
+function TabItem({ label, name, active, onPress, color, activeColor }: ItemProps) {
+  const Icon = ICONS[name];
   const progress = useSharedValue(active ? 1 : 0);
 
   useEffect(() => {
@@ -61,6 +71,18 @@ function TabItem({ label, active, onPress, color, activeColor }: ItemProps) {
         minHeight: 56,
       }}
     >
+      {/* Hairline icon above the wordmark. Fixed box + two crossfading copies
+          (ink active / ash inactive) so the active state never shifts layout. */}
+      {Icon ? (
+        <View style={{ width: 24, height: 24, marginBottom: space[1], alignItems: 'center', justifyContent: 'center' }}>
+          <Animated.View style={[{ position: 'absolute' }, activeStyle]}>
+            <Icon size={22} color={activeColor} strokeWidth={1.5} />
+          </Animated.View>
+          <Animated.View style={[{ position: 'absolute' }, inactiveStyle]}>
+            <Icon size={22} color={color} strokeWidth={1.5} />
+          </Animated.View>
+        </View>
+      ) : null}
       <Animated.View style={[{ position: 'relative', height: 26, justifyContent: 'center', alignItems: 'center' }, animatedStyle]}>
         <Animated.Text
           allowFontScaling={false}
@@ -151,6 +173,7 @@ export function BottomTabBar({ state, navigation }: BottomTabBarProps) {
               <TabItem
                 key={route.key}
                 label={label}
+                name={route.name}
                 active={isFocused}
                 onPress={onPress}
                 color={colors.ash}
