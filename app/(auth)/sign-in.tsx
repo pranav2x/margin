@@ -112,7 +112,7 @@ export default function SignIn() {
             <Txt
               variant="bodySm"
               tone="ink"
-              style={{ color: '#C0392B' }}
+              style={{ color: colors.ink }}
               accessibilityLiveRegion="polite"
             >
               {error}
