@@ -4,8 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
-import { captureRef } from 'react-native-view-shot';
-import * as Sharing from 'expo-sharing';
+import { shareSnapshot } from '../../lib/share';
 import * as Haptics from 'expo-haptics';
 import { MotiView } from 'moti';
 
@@ -198,29 +197,8 @@ export default function YouScreen() {
     },
   });
 
-  const share = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    try {
-      const uri = await captureRef(cardRef, { format: 'png', quality: 1 });
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share your card' });
-      }
-    } catch {
-      // Capture/share unavailable (e.g. simulator without share targets) — no-op.
-    }
-  };
-
-  const shareMilestone = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    try {
-      const uri = await captureRef(milestoneRef, { format: 'png', quality: 1 });
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share your streak' });
-      }
-    } catch {
-      // Capture/share unavailable — no-op.
-    }
-  };
+  const share = () => shareSnapshot(cardRef, 'Share your card');
+  const shareMilestone = () => shareSnapshot(milestoneRef, 'Share your streak');
 
   if (profileQ.isLoading || catalogQ.isLoading) {
     return (

@@ -3,9 +3,8 @@ import { View, ScrollView, Pressable, TextInput, ActivityIndicator } from 'react
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { captureRef } from 'react-native-view-shot';
-import * as Sharing from 'expo-sharing';
 import * as Haptics from 'expo-haptics';
+import { shareSnapshot } from '../../lib/share';
 
 import { Txt } from '../../components/primitives/Text';
 import { MicroLabel } from '../../components/primitives/MicroLabel';
@@ -282,18 +281,10 @@ export default function BattlesScreen() {
   };
 
   const share = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    try {
-      const uri = await captureRef(cardRef, { format: 'png', quality: 1 });
-      // Filing (sharing) a battle is a core-loop action — advance the streak,
-      // fire-and-forget so it counts even if the OS share sheet is dismissed.
-      void recordActivity(queryClient);
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share this battle' });
-      }
-    } catch {
-      // Capture/share unavailable — no-op.
-    }
+    // Filing (sharing) a battle is a core-loop action — advance the streak,
+    // fire-and-forget so it counts even if the OS share sheet is dismissed.
+    void recordActivity(queryClient);
+    await shareSnapshot(cardRef, 'Share this battle');
   };
 
   // ── Selection view ────────────────────────────────────────
