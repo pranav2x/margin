@@ -25,10 +25,15 @@ export function PrimaryButton({
   const { colors } = useTheme();
 
   const filled = variant === 'primary';
+  // Ember is the one accent and the filled primary button is its CTA role: a
+  // solid ember fill carrying a light (paper) label. paper-on-ember clears 3:1
+  // in both themes and reads fine at button weight. Ghost buttons stay a
+  // monochrome ink outline. (The inverted filled variant — for ink surfaces —
+  // intentionally stays paper, not ember, and is unused today.)
   const bg = filled
     ? inverted
       ? colors.paper
-      : colors.ink
+      : colors.ember
     : 'transparent';
   const fg = filled
     ? inverted

@@ -67,15 +67,23 @@ function OpponentRow({ p, onPress }: { p: MyProfile; onPress: () => void }) {
 }
 
 function ComparisonRow({ row, showWinner, verified }: { row: CompRow; showWinner: boolean; verified?: boolean }) {
+  const { colors } = useTheme();
   const unit = row.metric.unit;
-  const meTone = showWinner && row.winner === 'me' ? 'ink' : 'ash';
-  const oppTone = showWinner && row.winner === 'opp' ? 'ink' : 'ash';
+  // The winning side is a sanctioned ember moment — the one accent marks the
+  // result. The losing side recedes to ash; ties stay monochrome.
+  const meWins = showWinner && row.winner === 'me';
+  const oppWins = showWinner && row.winner === 'opp';
   return (
     <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[4] }}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
         <View style={{ width: 76, alignItems: 'flex-start' }}>
-          <Score value={formatStatValue(row.mine.value, unit)} size="sm" tone={meTone} />
-          {showWinner && row.winner === 'me' && <MicroLabel tone="ink" style={{ marginTop: space[1] }}>WINS</MicroLabel>}
+          <Score
+            value={formatStatValue(row.mine.value, unit)}
+            size="sm"
+            tone={meWins ? 'ink' : 'ash'}
+            style={meWins ? { color: colors.ember } : undefined}
+          />
+          {meWins && <MicroLabel style={{ marginTop: space[1], color: colors.ember }}>WINS</MicroLabel>}
         </View>
 
         <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: space[2] }}>
@@ -90,8 +98,13 @@ function ComparisonRow({ row, showWinner, verified }: { row: CompRow; showWinner
         </View>
 
         <View style={{ width: 76, alignItems: 'flex-end' }}>
-          <Score value={formatStatValue(row.theirs.value, unit)} size="sm" tone={oppTone} />
-          {showWinner && row.winner === 'opp' && <MicroLabel tone="ink" style={{ marginTop: space[1] }}>WINS</MicroLabel>}
+          <Score
+            value={formatStatValue(row.theirs.value, unit)}
+            size="sm"
+            tone={oppWins ? 'ink' : 'ash'}
+            style={oppWins ? { color: colors.ember } : undefined}
+          />
+          {oppWins && <MicroLabel style={{ marginTop: space[1], color: colors.ember }}>WINS</MicroLabel>}
         </View>
       </View>
     </View>

@@ -164,6 +164,9 @@ export default function YouScreen() {
             </View>
           </View>
 
+          {/* Phase 6 reserves the rest of the app's ember accents for this area:
+              an active streak flame beside the headline number and milestone
+              celebrations. Not built yet — left monochrome; don't fake the accent. */}
           {/* Headline number */}
           {top ? (
             <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[7] }}>
