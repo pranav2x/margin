@@ -200,3 +200,29 @@ export function useSchoolOpponents(schoolId: string | null, sport: string | null
     },
   });
 }
+
+// Browse same-sport athletes at a set of nearby schools (paired with
+// useNearbySchools). The viewer's own school is filtered out client-side so
+// "NEAR YOU" never duplicates the "AT YOUR SCHOOL" list above it.
+export function useNearbyOpponents(
+  schoolIds: string[] | null,
+  sport: string | null,
+  selfId: string | undefined,
+  excludeSchoolId: string | null,
+) {
+  const ids = (schoolIds ?? []).filter((id) => id && id !== excludeSchoolId);
+  return useQuery({
+    queryKey: ['nearby-opponents', ids, sport],
+    enabled: !!sport && ids.length > 0,
+    queryFn: async (): Promise<MyProfile[]> => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(OPPONENT_COLUMNS)
+        .eq('primary_sport', sport!)
+        .in('school_id', ids)
+        .limit(50);
+      if (error) throw error;
+      return ((data as unknown as MyProfile[]) ?? []).filter((p) => p.id !== selfId);
+    },
+  });
+}

@@ -20,6 +20,7 @@ import {
   formatStatValue,
   useMyProfile,
   useMyStats,
+  useNearbyOpponents,
   useOpponentSearch,
   usePublicProfile,
   usePublicStats,
@@ -31,6 +32,7 @@ import {
 } from '../../lib/hooks/usePlayerProfile';
 import { useTheme, space, SCREEN_PADDING, fonts } from '../../theme';
 import { recordActivity } from '../../lib/hooks/useStreak';
+import { useNearbySchools } from '../../lib/hooks/useNearbySchools';
 
 type Winner = 'me' | 'opp' | 'tie';
 
@@ -132,6 +134,17 @@ export default function BattlesScreen() {
 
   const searchQ = useOpponentSearch(query, mySport, me?.id);
   const schoolQ = useSchoolOpponents(me?.school_id ?? null, mySport, me?.id);
+
+  // "NEAR YOU" — opt-in, location-driven discovery. Tapping the CTA hits the
+  // foreground permission once; coords are never stored (see useNearbySchools).
+  const nearbySchools = useNearbySchools(8);
+  const nearbySchoolIds = (nearbySchools.data ?? []).map((s) => s.id);
+  const nearbyOpponentsQ = useNearbyOpponents(
+    nearbySchoolIds.length ? nearbySchoolIds : null,
+    mySport,
+    me?.id,
+    me?.school_id ?? null,
+  );
 
   const oppProfileQ = usePublicProfile(opponentId ?? undefined);
   const oppStatsQ = usePublicStats(opponentId ?? undefined);
@@ -318,6 +331,59 @@ export default function BattlesScreen() {
                   <View key={p.id}>
                     <OpponentRow p={p} onPress={() => pick(p.id)} />
                     {i < (schoolQ.data ?? []).length - 1 && <HairlineRule />}
+                  </View>
+                ))
+              )}
+
+              {/* NEAR YOU — location-driven, opt-in. The first tap requests
+                  foreground permission; coords leave the device once (RPC)
+                  and are never persisted (see useNearbySchools). */}
+              <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8], paddingBottom: space[2] }}>
+                <MicroLabel>NEAR YOU</MicroLabel>
+              </View>
+              <HairlineRule />
+
+              {nearbySchools.data == null ? (
+                <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[5] }}>
+                  <Txt variant="bodyLg" tone="ash" style={{ marginBottom: space[4] }}>
+                    Find rivals at schools around yours.
+                  </Txt>
+                  {nearbySchools.loading ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
+                      <ActivityIndicator color={colors.ink} />
+                      <MicroLabel>FINDING SCHOOLS NEAR YOU…</MicroLabel>
+                    </View>
+                  ) : (
+                    <>
+                      <PrimaryButton
+                        label="SHOW SCHOOLS NEAR ME"
+                        variant="ghost"
+                        full
+                        onPress={() => {
+                          Haptics.selectionAsync();
+                          void nearbySchools.locate(8);
+                        }}
+                      />
+                      {nearbySchools.denied && (
+                        <MicroLabel style={{ marginTop: space[3] }}>NO LOCATION — STAY AT YOUR SCHOOL</MicroLabel>
+                      )}
+                    </>
+                  )}
+                </View>
+              ) : (nearbyOpponentsQ.data ?? []).length === 0 ? (
+                <View style={{ paddingHorizontal: SCREEN_PADDING, paddingVertical: space[5] }}>
+                  <Txt variant="display4" italic tone="ash" style={{ fontFamily: 'InstrumentSerifItalic' }}>
+                    Nobody at the neighbors — yet.
+                  </Txt>
+                  <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[3] }}>
+                    The kids at the schools around you haven't put marks up.
+                  </Txt>
+                </View>
+              ) : (
+                (nearbyOpponentsQ.data ?? []).map((p, i, arr) => (
+                  <View key={p.id}>
+                    <OpponentRow p={p} onPress={() => pick(p.id)} />
+                    {i < arr.length - 1 && <HairlineRule />}
                   </View>
                 ))
               )}

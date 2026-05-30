@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import * as Location from 'expo-location';
 import { Flame } from 'lucide-react-native';
 
 import { Txt } from '../../components/primitives/Text';
@@ -16,6 +15,7 @@ import { Score } from '../../components/motion/Score';
 import { useTheme, space, SCREEN_PADDING, fonts } from '../../theme';
 import { supabase } from '../../lib/supabase';
 import { recordActivity } from '../../lib/hooks/useStreak';
+import { useNearbySchools, type NearbySchool } from '../../lib/hooks/useNearbySchools';
 
 interface School {
   id: string;
@@ -52,9 +52,8 @@ export default function Onboarding() {
 
   // Step 1 — school
   const [schoolMode, setSchoolMode] = useState<SchoolMode>('intro');
-  const [locating, setLocating] = useState(false);
-  const [locationDenied, setLocationDenied] = useState(false);
-  const [nearby, setNearby] = useState<School[]>([]);
+  const nearbyHook = useNearbySchools(6);
+  const { loading: locating, denied: locationDenied, data: nearby } = nearbyHook;
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<School[]>([]);
   const [selected, setSelected] = useState<School | null>(null);
@@ -123,39 +122,19 @@ export default function Onboarding() {
 
   const useMyLocation = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setLocating(true);
-    setLocationDenied(false);
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setLocationDenied(true);
-        setSchoolMode('manual');
-        return;
-      }
-      // One-shot read. The coordinates are used only for this RPC call and are
-      // never stored in state, a store, or the database.
-      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      const { data, error } = await supabase.rpc('nearby_schools', {
-        p_lat: pos.coords.latitude,
-        p_lng: pos.coords.longitude,
-        p_limit: 6,
-      });
-      if (error || !data || data.length === 0) {
-        setSchoolMode('manual');
-        return;
-      }
-      setNearby(data as School[]);
+    // Hook handles the foreground permission + nearby_schools RPC and never
+    // persists coordinates. We just react to the result.
+    const list = await nearbyHook.locate(6);
+    if (list && list.length > 0) {
       setSchoolMode('nearby');
-    } catch {
+    } else {
       setSchoolMode('manual');
-    } finally {
-      setLocating(false);
     }
   };
 
-  const pickSchool = (s: School) => {
+  const pickSchool = (s: School | NearbySchool) => {
     Haptics.selectionAsync();
-    setSelected(s);
+    setSelected({ id: s.id, name: s.name, city: s.city, state: s.state });
   };
 
   const finish = async () => {
@@ -330,7 +309,7 @@ export default function Onboarding() {
   }
 
   // ── Step 1: school ────────────────────────────────────────
-  const list = schoolMode === 'nearby' ? nearby : results;
+  const list: (School | NearbySchool)[] = schoolMode === 'nearby' ? (nearby ?? []) : results;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top + space[7] }}>
