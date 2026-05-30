@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { Txt } from '../primitives/Text';
 import { MicroLabel } from '../primitives/MicroLabel';
 import { HairlineRule } from '../primitives/HairlineRule';
+import { Grain } from '../primitives/Grain';
 import { Score } from '../motion/Score';
 import { VerifiedMark } from './StatLine';
 import { useTheme, space } from '../../theme';
@@ -41,6 +42,8 @@ export const ShareCard = forwardRef<View, Props>(function ShareCard(
         padding: space[6],
       }}
     >
+      {/* Newsprint grain — sits under the type, captured with the card. */}
+      <Grain />
       <Txt variant="display3" style={{ fontSize: 34, lineHeight: 36, letterSpacing: 1 }}>
         Elevate
       </Txt>

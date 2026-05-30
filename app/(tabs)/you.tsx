@@ -11,6 +11,7 @@ import * as Haptics from 'expo-haptics';
 import { Txt } from '../../components/primitives/Text';
 import { MicroLabel } from '../../components/primitives/MicroLabel';
 import { HairlineRule } from '../../components/primitives/HairlineRule';
+import { Grain } from '../../components/primitives/Grain';
 import { Avatar } from '../../components/primitives/Avatar';
 import { PrimaryButton } from '../../components/primitives/PrimaryButton';
 import { RollUpNumber } from '../../components/motion/RollUpNumber';
@@ -130,6 +131,8 @@ export default function YouScreen() {
         >
           {/* Header */}
           <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[6] }}>
+            {/* Newsprint grain behind the masthead — faint, non-interactive. */}
+            <Grain />
             <Avatar uri={profile?.avatar_url ?? undefined} size={88} />
             <Txt variant="display1" accessibilityRole="header" style={{ marginTop: space[5], fontSize: 56, lineHeight: 60 }}>
               {profile?.display_name ?? `@${handle}`}
