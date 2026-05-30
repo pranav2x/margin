@@ -30,7 +30,7 @@ export const BattleShareCard = forwardRef<View, Props>(function BattleShareCard(
       ref={ref}
       collapsable={false}
       style={{
-        backgroundColor: colors.paper,
+        backgroundColor: colors.surface,
         borderWidth: 1,
         borderColor: colors.ink,
         padding: space[6],

@@ -201,20 +201,24 @@ export default function YouScreen() {
               <Txt variant="bodyLg" tone="ash">Nothing on the board yet.</Txt>
             </View>
           ) : (
-            grouped.map((group) => (
-              <View key={group.sport}>
-                <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[5], paddingBottom: space[1] }}>
-                  <Txt variant="display4" style={{ fontSize: 22 }}>{SPORT_LABELS[group.sport]}</Txt>
-                </View>
-                <HairlineRule />
-                {group.rows.map((s, i) => (
-                  <View key={s.id}>
-                    <StatLine stat={s} onPress={() => sheetRef.current?.present(s)} />
-                    {i < group.rows.length - 1 && <HairlineRule />}
+            // Grouped stat rows sit one elevation step up (paper → surface); the
+            // existing hairlines stay the only dividers — no new borders/shadows.
+            <View style={{ backgroundColor: colors.surface }}>
+              {grouped.map((group) => (
+                <View key={group.sport}>
+                  <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[5], paddingBottom: space[1] }}>
+                    <Txt variant="display4" style={{ fontSize: 22 }}>{SPORT_LABELS[group.sport]}</Txt>
                   </View>
-                ))}
-              </View>
-            ))
+                  <HairlineRule />
+                  {group.rows.map((s, i) => (
+                    <View key={s.id}>
+                      <StatLine stat={s} onPress={() => sheetRef.current?.present(s)} />
+                      {i < group.rows.length - 1 && <HairlineRule />}
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </View>
           )}
 
           <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[8] }}>

@@ -184,7 +184,7 @@ export const ProfileEditSheet = forwardRef<ProfileEditSheetRef, Props>(function 
       snapPoints={snapPoints}
       enablePanDownToClose
       backdropComponent={renderBackdrop}
-      backgroundStyle={{ backgroundColor: colors.paper, borderRadius: 0 }}
+      backgroundStyle={{ backgroundColor: colors.surface, borderRadius: 0 }}
       handleIndicatorStyle={{ backgroundColor: colors.ash }}
     >
       <BottomSheetScrollView

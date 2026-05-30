@@ -283,28 +283,31 @@ export default function BattlesScreen() {
       <HairlineRule />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}>
-        {/* Tally header */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: SCREEN_PADDING, paddingTop: space[7] }}>
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <Avatar uri={me?.avatar_url ?? undefined} size={56} />
-            <Txt variant="bodySm" numberOfLines={1} style={{ marginTop: space[2], fontFamily: 'GeistMono' }}>@{me?.handle ?? 'you'}</Txt>
+        {/* Tally header — one elevation step up (paper → surface). The tonal
+            step alone sets the score band off from the list; no new borders. */}
+        <View style={{ backgroundColor: colors.surface, paddingBottom: space[6] }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: SCREEN_PADDING, paddingTop: space[7] }}>
+            <View style={{ flex: 1, alignItems: 'center' }}>
+              <Avatar uri={me?.avatar_url ?? undefined} size={56} />
+              <Txt variant="bodySm" numberOfLines={1} style={{ marginTop: space[2], fontFamily: 'GeistMono' }}>@{me?.handle ?? 'you'}</Txt>
+            </View>
+            <View style={{ alignItems: 'center', paddingHorizontal: space[4] }}>
+              <Score value={`${myWins}–${oppWins}`} size="xl" />
+              <MicroLabel style={{ marginTop: space[2] }}>{ties > 0 ? `${ties} TIE${ties > 1 ? 'S' : ''}` : 'ALL MARKS'}</MicroLabel>
+            </View>
+            <View style={{ flex: 1, alignItems: 'center' }}>
+              <Avatar uri={opp?.avatar_url ?? undefined} size={56} />
+              <Txt variant="bodySm" numberOfLines={1} style={{ marginTop: space[2], fontFamily: 'GeistMono' }}>@{opp?.handle ?? ''}</Txt>
+            </View>
           </View>
-          <View style={{ alignItems: 'center', paddingHorizontal: space[4] }}>
-            <Score value={`${myWins}–${oppWins}`} size="xl" />
-            <MicroLabel style={{ marginTop: space[2] }}>{ties > 0 ? `${ties} TIE${ties > 1 ? 'S' : ''}` : 'ALL MARKS'}</MicroLabel>
-          </View>
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <Avatar uri={opp?.avatar_url ?? undefined} size={56} />
-            <Txt variant="bodySm" numberOfLines={1} style={{ marginTop: space[2], fontFamily: 'GeistMono' }}>@{opp?.handle ?? ''}</Txt>
-          </View>
-        </View>
 
-        {/* Verified-only sub-tally (the subset both sides have peer-verified). */}
-        {verifiedRows.length > 0 && (
-          <View style={{ alignItems: 'center', paddingTop: space[3] }}>
-            <MicroLabel>{`VERIFIED ONLY · ${vMyWins}–${vOppWins}`}</MicroLabel>
-          </View>
-        )}
+          {/* Verified-only sub-tally (the subset both sides have peer-verified). */}
+          {verifiedRows.length > 0 && (
+            <View style={{ alignItems: 'center', paddingTop: space[3] }}>
+              <MicroLabel>{`VERIFIED ONLY · ${vMyWins}–${vOppWins}`}</MicroLabel>
+            </View>
+          )}
+        </View>
 
         {oppProfileQ.isLoading || oppStatsQ.isLoading ? (
           <View style={{ paddingVertical: space[8], alignItems: 'center' }}>
