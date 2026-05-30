@@ -62,10 +62,12 @@ every gate write surfaces its own errors instead of failing silently.
 
 ## Design discipline
 
-Color lives only in `theme/colors.ts`. Today the palette is **six** values
-(`ink`, `paper`, `fog`, `ash`, `shadow`, `void`) across light and dark; it will
-**expand to eight** in **Phase 4**, introducing the one accent (`ember`). There
-are no other color literals anywhere — no `#hex`, no `rgba()`.
+Color lives only in `theme/colors.ts`. The palette is **eight** values
+(`ink`, `paper`, `surface`, `fog`, `ash`, `shadow`, `ember`, `void`) across light
+and dark. Depth comes from the tonal step `paper → surface` plus hairlines;
+`ember` is the one accent, reserved for action and achievement (primary CTA,
+battle-win, the live dot, and — later — streaks and milestones). There are no
+other color literals anywhere — no `#hex`, no `rgba()`.
 
 Numbers are **always** Geist Mono with `fontVariant: ['tabular-nums']` — a score
 going 99 → 100 must not shift the layout by a pixel (see `Score` and
