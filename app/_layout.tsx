@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { View, ActivityIndicator } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 
@@ -53,7 +54,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
-          <ThemedRoot />
+          <BottomSheetModalProvider>
+            <ThemedRoot />
+          </BottomSheetModalProvider>
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

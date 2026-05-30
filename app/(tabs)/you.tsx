@@ -3,7 +3,6 @@ import { View, ScrollView, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import * as Haptics from 'expo-haptics';
@@ -181,8 +180,7 @@ export default function YouScreen() {
     : null;
 
   return (
-    <BottomSheetModalProvider>
-      <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top }}>
+    <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top }}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: insets.bottom + space[10] }}
@@ -404,6 +402,5 @@ export default function YouScreen() {
         <StatEntrySheet ref={sheetRef} ageBand={profile?.age_band ?? null} metrics={catalogQ.data ?? []} onSaved={onSaved} />
         <ProfileEditSheet ref={editRef} profile={profile ?? null} onSaved={onProfileSaved} />
       </View>
-    </BottomSheetModalProvider>
   );
 }
