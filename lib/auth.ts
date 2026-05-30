@@ -16,6 +16,26 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 
 export const isExpoGo = Constants.appOwnership === 'expo';
 
+// GoogleSignIn iOS SDK 9+ auto-generates a nonce inside the native SDK and
+// embeds it in the returned idToken's `nonce` claim, but does NOT expose it
+// to the JS layer. Supabase rejects the token with "Passed nonce and nonce
+// in id_token should either both exist or not" unless we hand the same value
+// back. Recover it by decoding the JWT payload.
+function extractJwtNonce(jwt: string): string | undefined {
+  try {
+    const payload = jwt.split('.')[1];
+    if (!payload) return undefined;
+    const b64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
+    // Hermes (RN's default JS engine) ships atob globally.
+    const decoded = (globalThis as any).atob(padded);
+    const json = JSON.parse(decoded);
+    return typeof json.nonce === 'string' ? json.nonce : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 // ── Email one-time code (works in Expo Go) ───────────────────
 
 // Sends a 6-digit login code to the address. shouldCreateUser lets brand-new
@@ -79,9 +99,12 @@ export async function signInWithGoogle() {
     throw new Error('Google sign-in failed — no ID token returned.');
   }
 
+  const nonce = extractJwtNonce(idToken);
+
   const { data, error } = await supabase.auth.signInWithIdToken({
     provider: 'google',
     token: idToken,
+    ...(nonce ? { nonce } : {}),
   });
 
   if (error) throw error;
