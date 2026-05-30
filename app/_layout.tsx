@@ -24,8 +24,6 @@ import {
   GeistMono_500Medium,
 } from '@expo-google-fonts/geist-mono';
 
-import * as Linking from 'expo-linking';
-
 import { useTheme } from '../theme';
 import { supabase } from '../lib/supabase';
 
@@ -97,18 +95,6 @@ function ThemedRoot() {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
-
-  // Handle OAuth deep link redirects — Google sign-in returns here via
-  // exp+margin:// (Expo Go) or margin:// (dev build) after browser completes.
-  useEffect(() => {
-    const linkingSub = Linking.addEventListener('url', async ({ url }) => {
-      if (!url) return;
-      if (url.includes('code=')) {
-        await supabase.auth.exchangeCodeForSession(url);
-      }
-    });
-    return () => linkingSub.remove();
   }, []);
 
   // Gate state lives in react-query so the gate screens can invalidate it after
