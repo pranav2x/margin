@@ -1,56 +1,113 @@
 /**
- * Elevate — the only eight values that exist in this app.
+ * Elevate — color tokens (dark-first, spec-aligned).
  *
- * Depth comes from the tonal step paper → surface plus hairlines, never shadows.
- * ember is the single accent: reserved for action and achievement only (the
- * primary CTA, the winning side of a battle, the live dot, and — later — streak
- * flames and milestone celebrations). If you reach for a ninth color, you are
- * solving the wrong problem; use a surface tone or a hairline instead.
+ * The public names (ink, paper, surface, fog, ash, shadow, ember, void,
+ * emberPressed, plus new overlay/popover/emberOnDark/textDisabled and the four
+ * semantic tokens) are the STABLE INTERFACE every screen and primitive imports.
+ * Do not rename them. The underlying hexes are the canonical spec values from
+ * DESIGN_SPEC.md; see DESIGN_RULES.md for the legacy-name ↔ spec-name mapping.
  *
- *   ink     — primary foreground (text, icons, ink fills)
- *   paper   — base background
- *   surface — second elevation tone, one step up from paper (cards, sheets)
- *   fog     — hairlines and the faintest fills
- *   ash     — secondary / muted foreground
- *   shadow  — inverted hairline / high-contrast divider
- *   ember   — the one accent (action + achievement) — Strava orange
- *   void    — true black (system edges)
+ * Dark-mode-first. Depth comes from lighter surface tiers
+ * (paper → surface → overlay → popover), never from drop shadows or borders.
  *
- *   emberPressed — pressed/active state for the ember CTA (added Phase 1)
+ * Mapping (dark mode is the source of truth):
+ *   ink          → text.primary       (#FFFFFF)
+ *   ash          → text.secondary     (white @ 70%)
+ *   shadow       → text.tertiary      (white @ 50%)   *also used for muted
+ *                                                       icons & strong dividers
+ *   textDisabled → text.disabled      (white @ 30%)
+ *   fog          → divider            (white @ 8%)
+ *   paper        → surface.base       (#0B0F12)
+ *   surface      → surface.raised     (#15191D)
+ *   overlay      → surface.overlay    (#1E242A) — nested cards, active rows
+ *   popover      → surface.popover    (#272E35) — modals, sheets, dropdowns
+ *   ember        → accent.default     (#FC4C02)
+ *   emberOnDark  → accent.onDark      (#FF6A2B)
+ *   emberPressed → accent.pressed     (#CC4200)
+ *   void         → pure black         (#000000) — system edges, shadowColor only
+ *   success / warning / error / info  → Apple-system semantic colors (dark tuned)
  */
 
 export interface ColorPalette {
+  // text
   ink: string;
-  paper: string;
-  surface: string;
-  fog: string;
   ash: string;
   shadow: string;
-  ember: string;
+  textDisabled: string;
+  // surfaces (4 elevation tiers — depth via lighter, not shadowed)
+  paper: string;
+  surface: string;
+  overlay: string;
+  popover: string;
+  // structure
+  fog: string;
   void: string;
+  // accent (single)
+  ember: string;
+  emberOnDark: string;
   emberPressed: string;
+  // semantic (fixed meanings — never decorative)
+  success: string;
+  warning: string;
+  error: string;
+  info: string;
 }
 
-export const lightColors: ColorPalette = {
-  ink: '#1A1A1A',
-  paper: '#FFFFFF',
-  surface: '#F7F7F7',
-  fog: '#E5E5E5',
-  ash: '#6B6B6B',
-  shadow: '#8E8E93',
-  ember: '#FC5200',
+// ──────────────────────────────────────────────────────────────────────────────
+// Dark (default, dark-first — the design target)
+// ──────────────────────────────────────────────────────────────────────────────
+export const darkColors: ColorPalette = {
+  // text — white at descending opacity (Material method, ≥15.8:1 on paper)
+  ink: '#FFFFFF',
+  ash: 'rgba(255,255,255,0.70)',
+  shadow: 'rgba(255,255,255,0.50)',
+  textDisabled: 'rgba(255,255,255,0.30)',
+
+  // surfaces — four elevation tiers, each ~5–8% lighter than the one below
+  paper: '#0B0F12',
+  surface: '#15191D',
+  overlay: '#1E242A',
+  popover: '#272E35',
+
+  // structure
+  fog: 'rgba(255,255,255,0.08)',
   void: '#000000',
+
+  // accent — Strava Tangelo; slightly brighter onDark variant for small text
+  ember: '#FC4C02',
+  emberOnDark: '#FF6A2B',
   emberPressed: '#CC4200',
+
+  // semantic — Apple system colors, dark-tuned
+  success: '#30D158',
+  warning: '#FFD60A',
+  error: '#FF453A',
+  info: '#0A84FF',
 };
 
-export const darkColors: ColorPalette = {
-  ink: '#F5F5F5',
-  paper: '#121212',
-  surface: '#1E1E1E',
-  fog: '#2A2A2A',
-  ash: '#A0A0A0',
-  shadow: '#8E8E93',
-  ember: '#FC5200',
+// ──────────────────────────────────────────────────────────────────────────────
+// Light (kept functional — not the current design target. Same NAMES, light values.)
+// ──────────────────────────────────────────────────────────────────────────────
+export const lightColors: ColorPalette = {
+  ink: '#1A1A1A',
+  ash: 'rgba(0,0,0,0.65)',
+  shadow: 'rgba(0,0,0,0.45)',
+  textDisabled: 'rgba(0,0,0,0.30)',
+
+  paper: '#FFFFFF',
+  surface: '#F7F7F7',
+  overlay: '#EFEFEF',
+  popover: '#FAFAFA',
+
+  fog: 'rgba(0,0,0,0.08)',
   void: '#000000',
+
+  ember: '#FC4C02',
+  emberOnDark: '#FC4C02',
   emberPressed: '#CC4200',
+
+  success: '#34C759',
+  warning: '#FFCC00',
+  error: '#FF3B30',
+  info: '#007AFF',
 };

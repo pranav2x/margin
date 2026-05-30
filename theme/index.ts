@@ -6,6 +6,8 @@ export * from './colors';
 export * from './type';
 export * from './space';
 export * from './motion';
+export * from './radius';
+export * from './icon';
 
 export function useTheme(): { colors: ColorPalette; isDark: boolean } {
   const scheme = useColorScheme();
