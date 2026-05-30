@@ -55,6 +55,7 @@ export default function Onboarding() {
   const [results, setResults] = useState<School[]>([]);
   const [selected, setSelected] = useState<School | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const currentYear = new Date().getFullYear();
   const gradYearNum = Number(gradYear);
@@ -156,27 +157,29 @@ export default function Onboarding() {
   const finish = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSaving(true);
+    setSaveError(null);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase
-          .from('profiles')
-          .update({
-            handle,
-            grad_year: gradYearNum,
-            primary_sport: primarySport ? primarySport.toLowerCase() : null,
-            school_id: selected ? selected.id : null,
-            onboarded: true,
-          })
-          .eq('id', user.id);
-      }
-    } catch {
-      // Best-effort; the user can edit later from the You tab.
-    } finally {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) throw authError ?? new Error('You need to be signed in to finish.');
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          handle,
+          grad_year: gradYearNum,
+          primary_sport: primarySport ? primarySport.toLowerCase() : null,
+          school_id: selected ? selected.id : null,
+          onboarded: true,
+        })
+        .eq('id', user.id);
+      if (updateError) throw updateError;
+      // Only flip the route guard forward once the profile write succeeded —
+      // otherwise the guard bounces straight back to onboarding.
+      await queryClient.invalidateQueries({ queryKey: ['auth-gate'] });
+      router.replace('/(tabs)/you');
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "Couldn't finish setting up. Try again.");
       setSaving(false);
     }
-    await queryClient.invalidateQueries({ queryKey: ['auth-gate'] });
-    router.replace('/(tabs)/you');
   };
 
   // ── Step 0: identity ──────────────────────────────────────
@@ -398,6 +401,16 @@ export default function Onboarding() {
       )}
 
       <View style={{ position: 'absolute', left: SCREEN_PADDING, right: SCREEN_PADDING, bottom: insets.bottom + space[5] }}>
+        {saveError && (
+          <Txt
+            variant="bodySm"
+            tone="ink"
+            style={{ marginBottom: space[3], textAlign: 'center' }}
+            accessibilityLiveRegion="polite"
+          >
+            {saveError}
+          </Txt>
+        )}
         <View style={{ flexDirection: 'row', gap: space[3] }}>
           <PrimaryButton label="BACK" variant="ghost" onPress={() => setStep(0)} style={{ flex: 1 }} />
           <PrimaryButton

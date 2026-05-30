@@ -60,10 +60,12 @@ export const StatEntrySheet = forwardRef<StatEntrySheetRef, Props>(function Stat
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [requested, setRequested] = useState<VerifyMethod | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useImperativeHandle(ref, () => ({
     present: (stat?: PlayerStat) => {
       setRequested(null);
+      setError(null);
       if (stat) {
         setEditing(stat);
         setSport(stat.metric.sport as Sport);
@@ -103,28 +105,30 @@ export const StatEntrySheet = forwardRef<StatEntrySheetRef, Props>(function Stat
     if (!metric || !valueValid) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSaving(true);
+    setError(null);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.from('player_stats').upsert(
-          {
-            profile_id: user.id,
-            metric_id: metric.id,
-            value: numericValue,
-            notes: notes.trim() ? notes.trim() : null,
-            verified: false,
-            verification_method: 'self_reported',
-          },
-          { onConflict: 'profile_id,metric_id' },
-        );
-      }
-    } catch {
-      // Best-effort; surfaced via the refreshed query on reopen.
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) throw authError ?? new Error('You need to be signed in to save a stat.');
+      const { error: saveError } = await supabase.from('player_stats').upsert(
+        {
+          profile_id: user.id,
+          metric_id: metric.id,
+          value: numericValue,
+          notes: notes.trim() ? notes.trim() : null,
+          verified: false,
+          verification_method: 'self_reported',
+        },
+        { onConflict: 'profile_id,metric_id' },
+      );
+      if (saveError) throw saveError;
+      // Only confirm and dismiss once the write actually succeeded.
+      onSaved();
+      modalRef.current?.dismiss();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't save that stat. Try again.");
     } finally {
       setSaving(false);
     }
-    onSaved();
-    modalRef.current?.dismiss();
   };
 
   const requestVerification = async (method: VerifyMethod) => {
@@ -279,6 +283,17 @@ export const StatEntrySheet = forwardRef<StatEntrySheetRef, Props>(function Stat
               disabled={saving || !valueValid}
               style={{ marginTop: space[7] }}
             />
+
+            {error && (
+              <Txt
+                variant="bodySm"
+                tone="ink"
+                style={{ marginTop: space[3], textAlign: 'center' }}
+                accessibilityLiveRegion="polite"
+              >
+                {error}
+              </Txt>
+            )}
 
             {/* Verification (edit mode, unverified only) */}
             {editing && !editing.verified && (
