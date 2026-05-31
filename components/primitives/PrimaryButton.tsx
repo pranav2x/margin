@@ -1,7 +1,6 @@
 import { View, Pressable, type PressableProps, type ViewStyle } from 'react-native';
 import { Txt } from './Text';
-import { useTheme } from '../../theme';
-import { space } from '../../theme';
+import { useTheme, space, radius } from '../../theme';
 import * as Haptics from 'expo-haptics';
 
 interface Props extends Omit<PressableProps, 'children' | 'style'> {
@@ -64,7 +63,7 @@ export function PrimaryButton({
           backgroundColor: pressed && !disabled ? pressedBg : bg,
           borderWidth: filled ? 0 : 1,
           borderColor,
-          borderRadius: 12,
+          borderRadius: radius.md,
           minHeight: height,
           paddingHorizontal: space[5],
           alignItems: 'center',

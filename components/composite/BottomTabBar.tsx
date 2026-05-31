@@ -17,7 +17,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
-import { useTheme, space } from '../../theme';
+import { useTheme, space, radius } from '../../theme';
 import { AppIcon, type IconName } from '../primitives/AppIcon';
 import { MicroLabel } from '../primitives/MicroLabel';
 import { Txt } from '../primitives/Text';
@@ -132,7 +132,7 @@ function CreateButton({ onPress }: CreateButtonProps) {
           {
             width: 64,
             height: 64,
-            borderRadius: 32,
+            borderRadius: radius.full,
             alignItems: 'center',
             justifyContent: 'center',
             shadowColor: colors.void,
@@ -175,7 +175,7 @@ function ActionRow({ icon, label, onPress }: ActionProps) {
         style={{
           width: 40,
           height: 40,
-          borderRadius: 20,
+          borderRadius: radius.full,
           backgroundColor: colors.surface,
           alignItems: 'center',
           justifyContent: 'center',

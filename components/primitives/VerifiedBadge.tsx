@@ -1,7 +1,7 @@
 import { View } from 'react-native';
 import { AppIcon } from './AppIcon';
 import { Txt } from './Text';
-import { useTheme, space } from '../../theme';
+import { useTheme, space, radius } from '../../theme';
 
 /**
  * VerifiedBadge — the 3-tier verification mark used everywhere a stat is
@@ -67,7 +67,7 @@ export function VerifiedBadge({ tier, withLabel = false, inverted = false }: Pro
       style={{
         width: 18,
         height: 18,
-        borderRadius: 9,
+        borderRadius: radius.full,
         borderWidth: 1,
         borderColor: visual.border,
         backgroundColor: visual.bg,

@@ -1,7 +1,7 @@
 import { View, Pressable } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Txt } from './Text';
-import { space, useTheme } from '../../theme';
+import { space, radius, useTheme } from '../../theme';
 
 type Size = 'sm' | 'md' | 'lg';
 
@@ -48,7 +48,7 @@ export function ConfidenceMeter({ value, max = 10, size = 'md', editable, onChan
                 style={{
                   flex: 1,
                   height,
-                  borderRadius: 4,
+                  borderRadius: radius.xs,
                   backgroundColor: active ? colors.ember : colors.fog,
                 }}
                 accessibilityRole="adjustable"
@@ -62,7 +62,7 @@ export function ConfidenceMeter({ value, max = 10, size = 'md', editable, onChan
               style={{
                 flex: 1,
                 height,
-                borderRadius: 4,
+                borderRadius: radius.xs,
                 backgroundColor: active ? colors.ember : colors.fog,
               }}
             />

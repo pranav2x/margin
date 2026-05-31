@@ -1,7 +1,7 @@
 import { ScrollView, Pressable, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Txt } from '../primitives/Text';
-import { space, SCREEN_PADDING, useTheme } from '../../theme';
+import { space, radius, SCREEN_PADDING, useTheme } from '../../theme';
 
 interface Props {
   items: string[];
@@ -50,7 +50,7 @@ export function TabPill({ items, active, onChange, inverted }: Props) {
               style={{
                 marginTop: space[1],
                 height: 2,
-                borderRadius: 1,
+                borderRadius: radius.full,
                 backgroundColor: isActive ? colors.ember : 'transparent',
               }}
             />

@@ -20,7 +20,7 @@ import { PrimaryButton } from '../primitives/PrimaryButton';
 import { Avatar } from '../primitives/Avatar';
 import { Card } from '../primitives/Card';
 import { AppIcon } from '../primitives/AppIcon';
-import { useTheme, space, SCREEN_PADDING, type as typeScale } from '../../theme';
+import { useTheme, space, radius, SCREEN_PADDING, type as typeScale } from '../../theme';
 import { supabase } from '../../lib/supabase';
 import { SPORTS, SPORT_LABELS, type MyProfile, type Sport } from '../../lib/hooks/usePlayerProfile';
 
@@ -272,7 +272,7 @@ export const ProfileEditSheet = forwardRef<ProfileEditSheetRef, Props>(function 
             style={{
               width: 32,
               height: 32,
-              borderRadius: 16,
+              borderRadius: radius.full,
               alignItems: 'center',
               justifyContent: 'center',
               backgroundColor: colors.surface,
@@ -362,7 +362,7 @@ export const ProfileEditSheet = forwardRef<ProfileEditSheetRef, Props>(function 
                   style={({ pressed }) => ({
                     paddingVertical: space[2],
                     paddingHorizontal: space[4],
-                    borderRadius: 999,
+                    borderRadius: radius.full,
                     backgroundColor: active
                       ? pressed
                         ? colors.emberPressed

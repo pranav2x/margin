@@ -5,7 +5,7 @@ import { MicroLabel } from '../primitives/MicroLabel';
 import { HairlineRule } from '../primitives/HairlineRule';
 import { Score } from '../motion/Score';
 import { VerifiedMark } from './StatLine';
-import { useTheme, space } from '../../theme';
+import { useTheme, space, radius } from '../../theme';
 
 export interface HeadlineStat {
   label: string;
@@ -41,7 +41,7 @@ export const ShareCard = forwardRef<View, Props>(function ShareCard(
         backgroundColor: colors.surface,
         borderWidth: 1,
         borderColor: colors.fog,
-        borderRadius: 12,
+        borderRadius: radius.md,
         padding: space[6],
       }}
     >

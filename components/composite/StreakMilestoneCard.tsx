@@ -5,7 +5,7 @@ import { MicroLabel } from '../primitives/MicroLabel';
 import { HairlineRule } from '../primitives/HairlineRule';
 import { AppIcon } from '../primitives/AppIcon';
 import { Score } from '../motion/Score';
-import { useTheme, space } from '../../theme';
+import { useTheme, space, radius } from '../../theme';
 
 interface Props {
   handle: string;
@@ -33,7 +33,7 @@ export const StreakMilestoneCard = forwardRef<View, Props>(function StreakMilest
         backgroundColor: colors.surface,
         borderWidth: 1,
         borderColor: colors.fog,
-        borderRadius: 12,
+        borderRadius: radius.md,
         padding: space[6],
       }}
     >

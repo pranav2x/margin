@@ -4,7 +4,7 @@ import { Txt } from '../primitives/Text';
 import { MicroLabel } from '../primitives/MicroLabel';
 import { HairlineRule } from '../primitives/HairlineRule';
 import { Score } from '../motion/Score';
-import { useTheme, space } from '../../theme';
+import { useTheme, space, radius } from '../../theme';
 
 interface Props {
   meHandle: string;
@@ -33,7 +33,7 @@ export const BattleShareCard = forwardRef<View, Props>(function BattleShareCard(
         backgroundColor: colors.surface,
         borderWidth: 1,
         borderColor: colors.fog,
-        borderRadius: 12,
+        borderRadius: radius.md,
         padding: space[6],
       }}
     >

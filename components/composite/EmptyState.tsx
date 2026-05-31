@@ -2,7 +2,7 @@ import { View } from 'react-native';
 import { AppIcon, type IconName } from '../primitives/AppIcon';
 import { Txt } from '../primitives/Text';
 import { PrimaryButton } from '../primitives/PrimaryButton';
-import { useTheme, space, SCREEN_PADDING } from '../../theme';
+import { useTheme, space, radius, SCREEN_PADDING } from '../../theme';
 
 /**
  * EmptyState — a screen-level dead-end killer.
@@ -53,7 +53,7 @@ export function EmptyState({
         style={{
           width: 72,
           height: 72,
-          borderRadius: 36,
+          borderRadius: radius.full,
           backgroundColor: colors.surface,
           borderWidth: 1,
           borderColor: colors.fog,

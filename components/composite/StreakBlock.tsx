@@ -3,7 +3,7 @@ import { Score } from '../motion/Score';
 import { MicroLabel } from '../primitives/MicroLabel';
 import { AppIcon } from '../primitives/AppIcon';
 import { Txt } from '../primitives/Text';
-import { useTheme, space } from '../../theme';
+import { useTheme, space, radius } from '../../theme';
 import type { StreakData } from '../../lib/hooks/useStreak';
 
 const CELL = 26;
@@ -35,7 +35,7 @@ export function StreakBlock({ streak }: Props) {
               style={{
                 width: CELL,
                 height: CELL,
-                borderRadius: 6,
+                borderRadius: radius.xs,
                 alignItems: 'center',
                 justifyContent: 'center',
                 backgroundColor: d.state === 'active' ? colors.ink : 'transparent',

@@ -1,7 +1,7 @@
 import { Pressable, View, type ViewStyle } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Txt } from './Text';
-import { useTheme, space } from '../../theme';
+import { useTheme, space, radius } from '../../theme';
 
 /**
  * SportChip — 64px-tall glyph-over-label chip for the Boards sport rail.
@@ -40,7 +40,7 @@ export function SportChip({ glyph, label, active, onPress, style }: Props) {
         {
           width: CHIP_WIDTH,
           height: CHIP_HEIGHT,
-          borderRadius: 14,
+          borderRadius: radius.lg,
           borderWidth: 1,
           borderColor: active ? 'transparent' : colors.fog,
           backgroundColor: active

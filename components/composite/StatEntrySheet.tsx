@@ -21,7 +21,7 @@ import { HairlineRule } from '../primitives/HairlineRule';
 import { PrimaryButton } from '../primitives/PrimaryButton';
 import { Card } from '../primitives/Card';
 import { AppIcon } from '../primitives/AppIcon';
-import { useTheme, space, SCREEN_PADDING, type as typeScale } from '../../theme';
+import { useTheme, space, radius, SCREEN_PADDING, type as typeScale } from '../../theme';
 import { supabase } from '../../lib/supabase';
 import { recordActivity } from '../../lib/hooks/useStreak';
 import {
@@ -300,7 +300,7 @@ export const StatEntrySheet = forwardRef<StatEntrySheetRef, Props>(function Stat
             style={{
               width: 32,
               height: 32,
-              borderRadius: 16,
+              borderRadius: radius.full,
               alignItems: 'center',
               justifyContent: 'center',
               backgroundColor: colors.surface,
@@ -347,7 +347,7 @@ export const StatEntrySheet = forwardRef<StatEntrySheetRef, Props>(function Stat
                   style={({ pressed }) => ({
                     paddingVertical: space[2],
                     paddingHorizontal: space[4],
-                    borderRadius: 999,
+                    borderRadius: radius.full,
                     backgroundColor: active
                       ? pressed
                         ? colors.emberPressed

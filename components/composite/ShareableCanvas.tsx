@@ -3,7 +3,7 @@ import { View, Dimensions } from 'react-native';
 import { Txt } from '../primitives/Text';
 import { MicroLabel } from '../primitives/MicroLabel';
 import { HairlineRule } from '../primitives/HairlineRule';
-import { useTheme, space } from '../../theme';
+import { useTheme, space, radius } from '../../theme';
 
 /**
  * ShareableCanvas — a 9:16 paper-canvas wrapper used as the captureRef
@@ -45,7 +45,7 @@ export const ShareableCanvas = forwardRef<View, Props>(function ShareableCanvas(
         width: CANVAS_WIDTH,
         height: CANVAS_HEIGHT,
         backgroundColor: colors.paper,
-        borderRadius: 12,
+        borderRadius: radius.md,
         borderWidth: 1,
         borderColor: colors.fog,
         padding: space[5],
