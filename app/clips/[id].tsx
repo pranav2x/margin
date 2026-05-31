@@ -25,7 +25,7 @@ const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // Documented exception: chrome over video needs a translucent black backdrop
 // for legibility. See /(tabs)/clips.tsx for the rationale.
-const SCRIM_BACKDROP = 'rgba(0,0,0,0.35)';
+const SCRIM_BACKDROP = darkColors.scrim;
 
 // Lane D — single-clip player. Deep-linkable (share + open from feed row).
 export default function ClipDetail() {

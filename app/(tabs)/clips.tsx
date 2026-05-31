@@ -29,12 +29,9 @@ import { space, radius, icon } from '../../theme';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
-// Documented design exception (DESIGN_RULES.md §1, "Hard rules"):
-// chrome over video needs a translucent black backdrop for legibility. There
-// is no token for a 35% black scrim in /theme/colors — adding one would force
-// an alpha vocabulary on every other surface. This is the ONE allowed
-// non-token rgba in this file, scoped to media-overlay scrims only.
-const SCRIM_BACKDROP = 'rgba(0,0,0,0.35)';
+// Media-overlay scrim — pulled from the palette so chrome over video stays
+// legible without inlining an alpha string here. See colors.scrim.
+const SCRIM_BACKDROP = darkColors.scrim;
 
 // Right-rail action button — 44pt circular hit target per spec.
 const RAIL_TAP_TARGET = 44;

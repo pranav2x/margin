@@ -42,6 +42,8 @@ export interface ColorPalette {
   // structure
   fog: string;
   void: string;
+  // overlay scrim — fixed black @ 35% for legibility over media (video, image)
+  scrim: string;
   // accent (single)
   ember: string;
   emberOnDark: string;
@@ -72,6 +74,7 @@ export const darkColors: ColorPalette = {
   // structure
   fog: 'rgba(255,255,255,0.08)',
   void: '#000000',
+  scrim: 'rgba(0,0,0,0.35)',
 
   // accent — Strava Tangelo; slightly brighter onDark variant for small text
   ember: '#FC4C02',
@@ -101,6 +104,7 @@ export const lightColors: ColorPalette = {
 
   fog: 'rgba(0,0,0,0.08)',
   void: '#000000',
+  scrim: 'rgba(0,0,0,0.35)',
 
   ember: '#FC4C02',
   emberOnDark: '#FC4C02',
