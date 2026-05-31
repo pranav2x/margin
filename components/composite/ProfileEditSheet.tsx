@@ -237,7 +237,7 @@ export const ProfileEditSheet = forwardRef<ProfileEditSheetRef, Props>(function 
             paddingHorizontal: SCREEN_PADDING,
             paddingTop: space[4],
             paddingBottom: space[4],
-            backgroundColor: colors.paper,
+            backgroundColor: colors.popover,
             borderTopWidth: 1,
             borderTopColor: colors.fog,
           }}
@@ -247,7 +247,7 @@ export const ProfileEditSheet = forwardRef<ProfileEditSheetRef, Props>(function 
       </BottomSheetFooter>
     ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [insets.bottom, colors.paper, colors.fog, saving, canSave],
+    [insets.bottom, colors.popover, colors.fog, saving, canSave],
   );
 
   return (
@@ -257,7 +257,7 @@ export const ProfileEditSheet = forwardRef<ProfileEditSheetRef, Props>(function 
       enablePanDownToClose
       backdropComponent={renderBackdrop}
       footerComponent={renderFooter}
-      backgroundStyle={{ backgroundColor: colors.paper, borderRadius: space[4] }}
+      backgroundStyle={{ backgroundColor: colors.popover, borderRadius: radius.xl }}
       handleIndicatorStyle={{ backgroundColor: colors.fog, width: 36, height: 4 }}
     >
       {/* Header */}

@@ -260,7 +260,7 @@ export const StatEntrySheet = forwardRef<StatEntrySheetRef, Props>(function Stat
             paddingHorizontal: SCREEN_PADDING,
             paddingTop: space[4],
             paddingBottom: space[4],
-            backgroundColor: colors.paper,
+            backgroundColor: colors.popover,
             borderTopWidth: 1,
             borderTopColor: colors.fog,
           }}
@@ -275,7 +275,7 @@ export const StatEntrySheet = forwardRef<StatEntrySheetRef, Props>(function Stat
       </BottomSheetFooter>
     ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [insets.bottom, colors.paper, colors.fog, ctaLabel, canSave, metric],
+    [insets.bottom, colors.popover, colors.fog, ctaLabel, canSave, metric],
   );
 
   return (
@@ -285,7 +285,7 @@ export const StatEntrySheet = forwardRef<StatEntrySheetRef, Props>(function Stat
       enablePanDownToClose
       backdropComponent={renderBackdrop}
       footerComponent={renderFooter}
-      backgroundStyle={{ backgroundColor: colors.paper, borderRadius: space[4] }}
+      backgroundStyle={{ backgroundColor: colors.popover, borderRadius: radius.xl }}
       handleIndicatorStyle={{ backgroundColor: colors.fog, width: 36, height: 4 }}
     >
       {/* Header */}
