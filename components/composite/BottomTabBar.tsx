@@ -135,11 +135,6 @@ function CreateButton({ onPress }: CreateButtonProps) {
             borderRadius: radius.full,
             alignItems: 'center',
             justifyContent: 'center',
-            shadowColor: colors.void,
-            shadowOpacity: 0.15,
-            shadowRadius: 6,
-            shadowOffset: { width: 0, height: 2 },
-            elevation: 6,
           },
           animatedStyle,
         ]}
