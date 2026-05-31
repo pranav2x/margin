@@ -18,7 +18,7 @@ import { HairlineRule } from '../../components/primitives/HairlineRule';
 import { PrimaryButton } from '../../components/primitives/PrimaryButton';
 import { AppIcon } from '../../components/primitives/AppIcon';
 import { ConfidenceMeter } from '../../components/primitives/ConfidenceMeter';
-import { useTheme, space, SCREEN_PADDING, fonts } from '../../theme';
+import { useTheme, space, SCREEN_PADDING, type, fonts } from '../../theme';
 
 export default function NewCall() {
   const { colors } = useTheme();
@@ -97,15 +97,15 @@ export default function NewCall() {
               placeholder="What are you calling?"
               placeholderTextColor={colors.ash}
               multiline={false}
-              style={{
-                fontFamily: fonts.semibold,
-                fontSize: 22,
-                lineHeight: 28,
-                letterSpacing: -0.2,
-                color: colors.ink,
-                paddingVertical: space[3],
-                marginTop: space[2],
-              }}
+              style={[
+                type.display4,
+                {
+                  fontFamily: fonts.semibold,
+                  color: colors.ink,
+                  paddingVertical: space[3],
+                  marginTop: space[2],
+                },
+              ]}
             />
             <HairlineRule />
           </View>
@@ -121,15 +121,16 @@ export default function NewCall() {
               multiline
               numberOfLines={6}
               textAlignVertical="top"
-              style={{
-                fontFamily: fonts.medium,
-                fontSize: 17,
-                lineHeight: 24,
-                color: colors.ink,
-                paddingVertical: space[3],
-                marginTop: space[2],
-                minHeight: 120,
-              }}
+              style={[
+                type.bodyLg,
+                {
+                  fontFamily: fonts.medium,
+                  color: colors.ink,
+                  paddingVertical: space[3],
+                  marginTop: space[2],
+                  minHeight: 120,
+                },
+              ]}
             />
             <HairlineRule />
           </View>

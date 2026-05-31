@@ -12,7 +12,7 @@ import { ConfidenceMeter } from '../../components/primitives/ConfidenceMeter';
 import { SocialActionRow } from '../../components/primitives/SocialActionRow';
 import { PrimaryButton } from '../../components/primitives/PrimaryButton';
 import { AvatarMeta } from '../../components/composite/AvatarMeta';
-import { useTheme, space, SCREEN_PADDING } from '../../theme';
+import { useTheme, space, radius, SCREEN_PADDING } from '../../theme';
 
 // A Call is a sports prediction with a 1–10 confidence rating.
 type CallStatus = 'open' | 'won' | 'lost';
@@ -153,7 +153,7 @@ function StatusBanner({ status }: { status: Exclude<CallStatus, 'open'> }) {
         style={{
           width: 36,
           height: 36,
-          borderRadius: 18,
+          borderRadius: radius.full,
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: isWon ? colors.ember : colors.fog,

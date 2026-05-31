@@ -15,7 +15,7 @@ import { AppIcon } from '../../components/primitives/AppIcon';
 // NOTE: clips screens are dark-by-default regardless of theme preference. See
 // /(tabs)/clips.tsx for the rationale — same overlay-on-video contrast story.
 import { darkColors } from '../../theme/colors';
-import { space } from '../../theme';
+import { space, radius } from '../../theme';
 // TODO(supabase): replace with useClip(id) once data layer lands. For now we
 // pull from the same mock array used by the tab feed so deep-linked clip ids
 // resolve in dev.
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
   backChip: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: radius.full,
     backgroundColor: SCRIM_BACKDROP,
     alignItems: 'center',
     justifyContent: 'center',
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
   playPill: {
     width: 84,
     height: 84,
-    borderRadius: 42,
+    borderRadius: radius.full,
     backgroundColor: SCRIM_BACKDROP,
     alignItems: 'center',
     justifyContent: 'center',

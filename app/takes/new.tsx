@@ -18,7 +18,7 @@ import { HairlineRule } from '../../components/primitives/HairlineRule';
 import { PrimaryButton } from '../../components/primitives/PrimaryButton';
 import { Card } from '../../components/primitives/Card';
 import { AppIcon } from '../../components/primitives/AppIcon';
-import { useTheme, space, SCREEN_PADDING, fonts } from '../../theme';
+import { useTheme, space, radius, SCREEN_PADDING, type, fonts } from '../../theme';
 
 const MAX_LEN = 500;
 
@@ -109,15 +109,16 @@ export default function NewTake() {
               numberOfLines={10}
               textAlignVertical="top"
               autoFocus
-              style={{
-                fontFamily: fonts.medium,
-                fontSize: 18,
-                lineHeight: 26,
-                color: colors.ink,
-                paddingVertical: space[3],
-                marginTop: space[2],
-                minHeight: 220,
-              }}
+              style={[
+                type.bodyLg,
+                {
+                  fontFamily: fonts.medium,
+                  color: colors.ink,
+                  paddingVertical: space[3],
+                  marginTop: space[2],
+                  minHeight: 220,
+                },
+              ]}
             />
             <HairlineRule />
             <View
@@ -149,7 +150,7 @@ export default function NewTake() {
                   style={{
                     width: 44,
                     height: 44,
-                    borderRadius: 22,
+                    borderRadius: radius.full,
                     backgroundColor: colors.fog,
                     alignItems: 'center',
                     justifyContent: 'center',

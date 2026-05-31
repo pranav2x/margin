@@ -30,7 +30,7 @@ import {
   type ReportReason,
 } from '../../lib/hooks/useModeration';
 import { useFollowCounts, useIsFollowing, useToggleFollow } from '../../lib/hooks/useFollows';
-import { useTheme, space, SCREEN_PADDING } from '../../theme';
+import { useTheme, space, radius, SCREEN_PADDING } from '../../theme';
 
 export default function PlayerProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -364,7 +364,7 @@ export default function PlayerProfile() {
                       style={{
                         borderWidth: 1,
                         borderColor: colors.ink,
-                        borderRadius: 8,
+                        borderRadius: radius.sm,
                         paddingHorizontal: space[3],
                         paddingVertical: space[2],
                         minHeight: 36,

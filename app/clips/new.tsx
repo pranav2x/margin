@@ -16,7 +16,7 @@ import { AppIcon } from '../../components/primitives/AppIcon';
 // NOTE: clips screens are dark-by-default regardless of theme preference. See
 // /(tabs)/clips.tsx for the rationale.
 import { darkColors } from '../../theme/colors';
-import { space, type, fonts } from '../../theme';
+import { space, radius, type, fonts } from '../../theme';
 
 // TODO(supabase + expo-camera): wire camera capture and clip upload.
 // - "Record" → expo-camera (recordAsync) → upload to /clips/{user}/{uuid}.mp4
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   captureCard: {
-    borderRadius: 16,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: darkColors.fog,
     backgroundColor: darkColors.surface,
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
   captureIconWrap: {
     width: 96,
     height: 96,
-    borderRadius: 48,
+    borderRadius: radius.full,
     borderWidth: 1.5,
     borderColor: darkColors.fog,
     alignItems: 'center',
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
   },
   captionInput: {
     minHeight: 132,
-    borderRadius: 12,
+    borderRadius: radius.md,
     borderWidth: 1,
     padding: space[4],
   },

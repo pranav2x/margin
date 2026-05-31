@@ -12,7 +12,7 @@ import { SocialActionRow } from '../../components/primitives/SocialActionRow';
 import { AvatarMeta } from '../../components/composite/AvatarMeta';
 import { TabPill } from '../../components/composite/TabPill';
 import { HairlineRule } from '../../components/primitives/HairlineRule';
-import { useTheme, space, SCREEN_PADDING } from '../../theme';
+import { useTheme, space, radius, SCREEN_PADDING } from '../../theme';
 
 // A Call is a sports prediction with a 1–10 confidence rating.
 type CallStatus = 'open' | 'won' | 'lost';
@@ -109,7 +109,7 @@ function StatusBadge({ status }: { status: Exclude<CallStatus, 'open'> }) {
         gap: space[1],
         paddingHorizontal: space[2],
         paddingVertical: space[1],
-        borderRadius: 4,
+        borderRadius: radius.xs,
         backgroundColor: colors.surface,
       }}
     >
