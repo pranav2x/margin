@@ -16,22 +16,28 @@ import * as Sharing from 'expo-sharing';
 import * as Haptics from 'expo-haptics';
 import { Txt } from '../../components/primitives/Text';
 import { Avatar } from '../../components/primitives/Avatar';
-import { AppIcon } from '../../components/primitives/AppIcon';
+import { AppIcon, type IconName } from '../../components/primitives/AppIcon';
+import { Skeleton } from '../../components/primitives/Skeleton';
+import { EmptyState } from '../../components/composite/EmptyState';
 import { useCreateSheetStore } from '../../state/createSheet';
 // NOTE: clips screens are dark-by-default regardless of theme preference (videos
 // look better on black). We reach for `darkColors` directly so the chrome stays
 // stable when the user is in light mode. This is the documented one-off
 // exception to "always go through useTheme()".
 import { darkColors } from '../../theme/colors';
-import { space } from '../../theme';
+import { space, radius, icon } from '../../theme';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
-// Documented exception: chrome over video needs a translucent black backdrop
-// for legibility. There is no token for "35% black scrim" in /theme/colors —
-// adding one would force an alpha vocabulary on every other surface. Keep it
-// here, named so the intent is obvious.
+// Documented design exception (DESIGN_RULES.md §1, "Hard rules"):
+// chrome over video needs a translucent black backdrop for legibility. There
+// is no token for a 35% black scrim in /theme/colors — adding one would force
+// an alpha vocabulary on every other surface. This is the ONE allowed
+// non-token rgba in this file, scoped to media-overlay scrims only.
 const SCRIM_BACKDROP = 'rgba(0,0,0,0.35)';
+
+// Right-rail action button — 44pt circular hit target per spec.
+const RAIL_TAP_TARGET = 44;
 
 // TODO(supabase): replace with useClipsFeed() hook — pulls clips, pagination,
 // like/comment counts, viewer's like state, etc. The mock shape below mirrors
@@ -130,10 +136,18 @@ export const MOCK_CLIPS: ClipItem[] = [
 
 type FeedTab = 'following' | 'foryou';
 
+// Feed-level fetch state. Until the supabase hook lands these are wired
+// to fixed values, but the screen renders all three designed states.
+type FeedState = 'ready' | 'loading' | 'empty' | 'error';
+
 export default function ClipsTab() {
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<FeedTab>('foryou');
   const [activeId, setActiveId] = useState<string>(MOCK_CLIPS[0]?.id ?? '');
+
+  // TODO(supabase): wire to useClipsFeed() — `status`, `data`, `error`.
+  const feedState: FeedState = 'ready';
+  const clips = MOCK_CLIPS;
 
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60 }).current;
   const onViewableItemsChanged = useRef(
@@ -159,26 +173,41 @@ export default function ClipsTab() {
 
   return (
     <View style={{ flex: 1, backgroundColor: darkColors.paper }}>
-      {/* SafeArea top only — overlay top bar sits below the notch. */}
-      <FlatList
-        data={MOCK_CLIPS}
-        keyExtractor={(c) => c.id}
-        renderItem={renderItem}
-        pagingEnabled
-        snapToInterval={SCREEN_HEIGHT}
-        decelerationRate="fast"
-        showsVerticalScrollIndicator={false}
-        viewabilityConfig={viewabilityConfig}
-        onViewableItemsChanged={onViewableItemsChanged}
-        getItemLayout={(_, index) => ({
-          length: SCREEN_HEIGHT,
-          offset: SCREEN_HEIGHT * index,
-          index,
-        })}
-        // Bounces look bad on a paginating feed; matches TikTok / Reels.
-        bounces={false}
-        overScrollMode="never"
-      />
+      {feedState === 'ready' ? (
+        <FlatList
+          data={clips}
+          keyExtractor={(c) => c.id}
+          renderItem={renderItem}
+          pagingEnabled
+          snapToInterval={SCREEN_HEIGHT}
+          decelerationRate="fast"
+          showsVerticalScrollIndicator={false}
+          viewabilityConfig={viewabilityConfig}
+          onViewableItemsChanged={onViewableItemsChanged}
+          getItemLayout={(_, index) => ({
+            length: SCREEN_HEIGHT,
+            offset: SCREEN_HEIGHT * index,
+            index,
+          })}
+          // Bounces look bad on a paginating feed; matches TikTok / Reels.
+          bounces={false}
+          overScrollMode="never"
+        />
+      ) : feedState === 'loading' ? (
+        <ClipLoadingState bottomInset={insets.bottom} />
+      ) : feedState === 'empty' ? (
+        <View style={{ flex: 1, justifyContent: 'center' }}>
+          <EmptyState
+            icon="Video"
+            title="No clips yet — record your first PR"
+            body="Capture a rep, a route, or a lift. Tag it to a stat and it becomes proof."
+            ctaLabel="RECORD A CLIP"
+            onPress={() => undefined}
+          />
+        </View>
+      ) : (
+        <ClipErrorState />
+      )}
 
       {/* Top tab pills (Following / For You). Floats above the video. */}
       <View
@@ -205,10 +234,9 @@ export default function ClipsTab() {
         </Pressable>
         <View
           style={{
-            width: 1,
+            width: StyleSheet.hairlineWidth,
             height: 14,
-            backgroundColor: darkColors.ash,
-            opacity: 0.5,
+            backgroundColor: darkColors.shadow,
           }}
         />
         <Pressable
@@ -247,6 +275,8 @@ function ClipSlide({ clip, active, bottomInset }: ClipSlideProps) {
   const [liked, setLiked] = useState(false);
   const [muted, setMuted] = useState(true);
   const [paused, setPaused] = useState(false);
+  // Captions ON by default — Gen Z baseline. Tap MessageSquare to toggle.
+  const [captionsOn, setCaptionsOn] = useState(true);
   const openStatEntry = useCreateSheetStore((s) => s.openStatEntry);
 
   // Share-with-watermark hook. Wave 2.1 swaps this for a real ShareCard PNG
@@ -347,28 +377,24 @@ function ClipSlide({ clip, active, bottomInset }: ClipSlideProps) {
           source={{ uri: clip.posterUrl }}
           style={[
             StyleSheet.absoluteFill,
-            { opacity: videoReady ? 0 : 1, backgroundColor: darkColors.paper },
+            { backgroundColor: darkColors.paper },
+            !videoReady ? undefined : styles.hidden,
           ]}
           contentFit="cover"
           transition={200}
           cachePolicy="memory-disk"
         />
-        {/* Bottom-to-top gradient for overlay legibility (cheap two-layer scrim). */}
+        {/* Bottom-to-top scrim for overlay legibility. See SCRIM_BACKDROP
+            comment for why this rgba is allowed. */}
         <View
           pointerEvents="none"
-          style={[
-            StyleSheet.absoluteFillObject,
-            {
-              backgroundColor: darkColors.void,
-              opacity: 0.18,
-            },
-          ]}
+          style={[StyleSheet.absoluteFillObject, styles.scrim]}
         />
         {/* Center play indicator when paused OR when there's no real video. */}
         {paused || !videoReady ? (
           <View pointerEvents="none" style={styles.centerPlay}>
             <View style={styles.playPill}>
-              <AppIcon name="Play" size={36} tone="paper" filled />
+              <AppIcon name="Play" size={icon.sizes.xl} tone="ink" filled />
             </View>
           </View>
         ) : null}
@@ -418,11 +444,17 @@ function ClipSlide({ clip, active, bottomInset }: ClipSlideProps) {
           onPress={tagAsProof}
           accessibilityLabel="Tag clip as video proof for a stat"
         />
+        {/* Captions toggle — ON by default. Active = ember tint. Using
+            MessageSquare until Lucide `Subtitles` is added to AppIcon. */}
         <RailAction
-          icon={muted ? 'Pause' : 'Play'}
-          label={muted ? 'Muted' : 'On'}
-          onPress={() => setMuted((m) => !m)}
-          accessibilityLabel={muted ? 'Unmute' : 'Mute'}
+          icon="MessageSquare"
+          label={captionsOn ? 'CC on' : 'CC off'}
+          active={captionsOn}
+          onPress={() => {
+            Haptics.selectionAsync();
+            setCaptionsOn((c) => !c);
+          }}
+          accessibilityLabel={captionsOn ? 'Turn captions off' : 'Turn captions on'}
         />
       </View>
 
@@ -456,34 +488,41 @@ function ClipSlide({ clip, active, bottomInset }: ClipSlideProps) {
             @{clip.author.handle}
           </Txt>
         </View>
-        <Txt
-          variant="bodyLg"
-          weight="semibold"
-          numberOfLines={2}
-          style={{
-            color: darkColors.ink,
-            marginTop: space[3],
-            // Don't let the caption run under the right rail.
-            paddingRight: space[10],
-          }}
-        >
-          {clip.caption}
-        </Txt>
+        {captionsOn ? (
+          <Txt
+            variant="bodyLg"
+            weight="semibold"
+            numberOfLines={2}
+            style={{
+              color: darkColors.ink,
+              marginTop: space[3],
+              // Don't let the caption run under the right rail.
+              paddingRight: space[10],
+            }}
+          >
+            {clip.caption}
+          </Txt>
+        ) : null}
       </View>
     </View>
   );
 }
 
 interface RailActionProps {
-  icon: 'Heart' | 'MessageCircle' | 'Share2' | 'Bookmark' | 'Play' | 'Pause' | 'Check';
+  icon: IconName;
   label: string;
   active?: boolean;
   onPress: () => void;
   accessibilityLabel: string;
 }
 
+/**
+ * One vertical action in the right rail. 44pt circular hit target (spec),
+ * Lucide icon at `icon.sizes.lg` (24), micro label below. Active heart =
+ * ember filled; everything else inherits `ink`.
+ */
 function RailAction({
-  icon,
+  icon: iconName,
   label,
   active,
   onPress,
@@ -495,23 +534,95 @@ function RailAction({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       hitSlop={8}
-      style={{ alignItems: 'center', gap: space[1] }}
+      style={({ pressed }) => [
+        styles.railAction,
+        pressed && styles.railActionPressed,
+      ]}
     >
       <AppIcon
-        name={icon}
-        size={30}
-        tone={active ? 'ember' : 'paper'}
+        name={iconName}
+        size={icon.sizes.lg}
+        tone={active ? 'ember' : 'ink'}
         filled={active}
       />
       <Txt
         variant="micro"
         style={{
           color: active ? darkColors.ember : darkColors.ink,
+          marginTop: space[1],
         }}
       >
         {label}
       </Txt>
     </Pressable>
+  );
+}
+
+/**
+ * Skeleton screen for the clip feed — fakes the video tile + right-rail
+ * footprint so the transition into real content doesn't shift the layout.
+ */
+function ClipLoadingState({ bottomInset }: { bottomInset: number }) {
+  const TAB_BAR_OVERLAP = 64 + Math.max(bottomInset, space[3]);
+  return (
+    <View style={{ flex: 1, backgroundColor: darkColors.paper }}>
+      <Skeleton
+        w={'100%'}
+        h={SCREEN_HEIGHT}
+        radius="sm"
+        style={{ position: 'absolute', top: 0, left: 0 }}
+      />
+      {/* Right-rail placeholders. Six dots, each at 44pt to match the real rail. */}
+      <View
+        style={[
+          styles.rightRail,
+          { bottom: TAB_BAR_OVERLAP + space[5] },
+        ]}
+      >
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <Skeleton key={i} w={RAIL_TAP_TARGET} h={RAIL_TAP_TARGET} radius="full" />
+        ))}
+      </View>
+      {/* Bottom-left author + caption placeholders. */}
+      <View
+        style={[
+          styles.bottomLeft,
+          { bottom: TAB_BAR_OVERLAP + space[4], gap: space[3] },
+        ]}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
+          <Skeleton w={40} h={40} radius="full" />
+          <Skeleton w={120} h={16} />
+        </View>
+        <Skeleton w={'80%'} h={16} />
+      </View>
+    </View>
+  );
+}
+
+/**
+ * Inline error state. No spinner, no blank screen — the rail/composition is
+ * gone because there's no clip to act on, but the user is told what happened.
+ */
+function ClipErrorState() {
+  return (
+    <View
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: space[5],
+        gap: space[3],
+      }}
+    >
+      <AppIcon name="X" size={icon.sizes.xl} tone="ash" />
+      <Txt variant="display4" weight="bold" style={{ color: darkColors.ink, textAlign: 'center' }}>
+        Couldn’t load clips
+      </Txt>
+      <Txt variant="body" style={{ color: darkColors.ash, textAlign: 'center' }}>
+        Check your connection and pull to refresh.
+      </Txt>
+    </View>
   );
 }
 
@@ -535,7 +646,18 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: space[4],
     alignItems: 'center',
-    gap: space[5],
+    gap: space[4],
+  },
+  railAction: {
+    width: RAIL_TAP_TARGET,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: RAIL_TAP_TARGET,
+  },
+  railActionPressed: {
+    // Spec press state: subtle scale-down via opacity stand-in (no transform
+    // here so the icon + label stay legible without layout jitter).
+    opacity: 0.7,
   },
   bottomLeft: {
     position: 'absolute',
@@ -550,9 +672,15 @@ const styles = StyleSheet.create({
   playPill: {
     width: 84,
     height: 84,
-    borderRadius: 42,
+    borderRadius: radius.full,
     backgroundColor: SCRIM_BACKDROP,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  scrim: {
+    backgroundColor: SCRIM_BACKDROP,
+  },
+  hidden: {
+    opacity: 0,
   },
 });
