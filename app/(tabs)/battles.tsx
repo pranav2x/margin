@@ -13,8 +13,10 @@ import { Avatar } from '../../components/primitives/Avatar';
 import { PrimaryButton } from '../../components/primitives/PrimaryButton';
 import { Card } from '../../components/primitives/Card';
 import { StatBlock, StatBlockRow } from '../../components/primitives/StatBlock';
+import { Skeleton } from '../../components/primitives/Skeleton';
 import { AppIcon } from '../../components/primitives/AppIcon';
 import { AvatarMeta } from '../../components/composite/AvatarMeta';
+import { EmptyState } from '../../components/composite/EmptyState';
 import { Score } from '../../components/motion/Score';
 import { VerifiedMark } from '../../components/composite/StatLine';
 import { BattleShareCard } from '../../components/composite/BattleShareCard';
@@ -36,9 +38,13 @@ import {
   type PlayerStat,
   type Sport,
 } from '../../lib/hooks/usePlayerProfile';
-import { useTheme, space, SCREEN_PADDING, type, fonts } from '../../theme';
+import { useTheme, space, radius, SCREEN_PADDING, type, fonts } from '../../theme';
 import { recordActivity } from '../../lib/hooks/useStreak';
 import { useNearbySchools } from '../../lib/hooks/useNearbySchools';
+import {
+  DEMO_CURRENT_USER,
+  DEMO_RIVAL,
+} from '../../data/fixtures/demoAthletes';
 
 type Winner = 'me' | 'opp' | 'tie';
 
@@ -160,6 +166,216 @@ function ComparisonRow({ row, showWinner, verified }: { row: CompRow; showWinner
   );
 }
 
+/**
+ * BattleOfWeekCard — the hero VS card the screen opens on. Mirrors the
+ * golden you.tsx "Battle of the Week" pattern: overlay-tier Card, two
+ * avatars + handle + score columns, ash "vs" divider, hairline, footer row
+ * with margin caption + a single ember "Beat it" CTA pill. All values flow
+ * from tokens; no raw hex, no raw radii.
+ *
+ * `winner` flips the ember tint onto the leading side's Score. Ties stay
+ * monochrome so the accent never lies.
+ */
+interface BattleOfWeekCardProps {
+  meHandle: string;
+  meAvatarUrl?: string;
+  meValue: string;
+  oppHandle: string;
+  oppAvatarUrl?: string;
+  oppValue: string;
+  metricLabel: string;
+  marginLabel: string | null;
+  endsLabel: string;
+  winner: Winner | null;
+  onBeatIt: () => void;
+}
+
+function BattleOfWeekCard({
+  meHandle,
+  meAvatarUrl,
+  meValue,
+  oppHandle,
+  oppAvatarUrl,
+  oppValue,
+  metricLabel,
+  marginLabel,
+  endsLabel,
+  winner,
+  onBeatIt,
+}: BattleOfWeekCardProps) {
+  const { colors } = useTheme();
+  const meWins = winner === 'me';
+  const oppWins = winner === 'opp';
+
+  return (
+    <Card tone="overlay" padded>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: space[4],
+        }}
+      >
+        <MicroLabel>BATTLE OF THE WEEK</MicroLabel>
+        <MicroLabel tone="ash">{metricLabel.toUpperCase()}</MicroLabel>
+      </View>
+
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Avatar uri={meAvatarUrl} size={56} />
+          <Txt
+            variant="bodySm"
+            weight="semibold"
+            numberOfLines={1}
+            style={{ marginTop: space[2] }}
+          >
+            @{meHandle}
+          </Txt>
+          <Score
+            value={meValue}
+            size="md"
+            tone={meWins ? 'ember' : 'ink'}
+            style={{ marginTop: space[1] }}
+          />
+        </View>
+        <View style={{ alignItems: 'center', paddingHorizontal: space[2] }}>
+          <Txt variant="display4" weight="extrabold" tone="ash">
+            vs
+          </Txt>
+        </View>
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Avatar uri={oppAvatarUrl} size={56} />
+          <Txt
+            variant="bodySm"
+            weight="semibold"
+            numberOfLines={1}
+            style={{ marginTop: space[2] }}
+          >
+            @{oppHandle}
+          </Txt>
+          <Score
+            value={oppValue}
+            size="md"
+            tone={oppWins ? 'ember' : 'ink'}
+            style={{ marginTop: space[1] }}
+          />
+        </View>
+      </View>
+
+      <HairlineRule style={{ marginVertical: space[4] }} />
+
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: space[3],
+        }}
+      >
+        <View style={{ flex: 1 }}>
+          {marginLabel ? (
+            <Txt variant="bodySm" weight="semibold">
+              {marginLabel}
+            </Txt>
+          ) : (
+            <Txt variant="bodySm" weight="semibold">
+              Drop a mark to enter
+            </Txt>
+          )}
+          <Txt variant="bodySm" tone="ash" style={{ marginTop: 2 }}>
+            {endsLabel}
+          </Txt>
+        </View>
+        <Pressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            onBeatIt();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Beat it"
+          hitSlop={8}
+          style={({ pressed }) => ({
+            minHeight: 44,
+            paddingHorizontal: space[5],
+            paddingVertical: space[2],
+            borderRadius: radius.full,
+            backgroundColor: pressed ? colors.emberPressed : colors.ember,
+            alignItems: 'center',
+            justifyContent: 'center',
+          })}
+        >
+          <Txt variant="bodySm" weight="bold" tone="paper">
+            Beat it
+          </Txt>
+        </Pressable>
+      </View>
+    </Card>
+  );
+}
+
+/**
+ * Skeleton placeholder matching BattleOfWeekCard's footprint so the loading
+ * state doesn't shift layout. Uses `Skeleton` primitive only — no raw colors.
+ */
+function BattleOfWeekSkeleton() {
+  return (
+    <Card tone="overlay" padded>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: space[4],
+        }}
+      >
+        <Skeleton w={140} h={10} />
+        <Skeleton w={72} h={10} />
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
+        <View style={{ flex: 1, alignItems: 'center', gap: space[2] }}>
+          <Skeleton w={56} h={56} radius="full" />
+          <Skeleton w={72} h={12} />
+          <Skeleton w={56} h={24} radius="sm" />
+        </View>
+        <Skeleton w={32} h={28} radius="sm" />
+        <View style={{ flex: 1, alignItems: 'center', gap: space[2] }}>
+          <Skeleton w={56} h={56} radius="full" />
+          <Skeleton w={72} h={12} />
+          <Skeleton w={56} h={24} radius="sm" />
+        </View>
+      </View>
+      <HairlineRule style={{ marginVertical: space[4] }} />
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <View style={{ gap: space[1] }}>
+          <Skeleton w={120} h={12} />
+          <Skeleton w={80} h={10} />
+        </View>
+        <Skeleton w={88} h={44} radius="full" />
+      </View>
+    </Card>
+  );
+}
+
+// Pluralise the metric unit for the human-readable margin caption. Reuses
+// `formatStatValue` so the number style matches what the row shows.
+function formatMargin(
+  metric: MetricRow | null,
+  mineValue: number,
+  theirsValue: number,
+): string | null {
+  if (!metric) return null;
+  const diff = Math.abs(mineValue - theirsValue);
+  if (diff === 0) return 'Margin: tie';
+  return `Margin: ${formatStatValue(diff, metric.unit)}${metric.unit ?? ''}`;
+}
+
 export default function BattlesScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -200,7 +416,13 @@ export default function BattlesScreen() {
   const botwQ = useQuery({
     queryKey: ['battle-of-week', mySport, primaryMetricKey, me?.school_id ?? null, me?.id ?? null],
     enabled: !!primaryMetricKey && !!me?.id,
-    queryFn: async (): Promise<{ profile_id: string; handle: string; school: string | null } | null> => {
+    queryFn: async (): Promise<{
+      profile_id: string;
+      handle: string;
+      school: string | null;
+      avatar_url: string | null;
+      value: number;
+    } | null> => {
       const scope = me?.school_id ? 'school' : 'everyone';
       const { data, error } = await supabase.rpc('leaderboard', {
         p_sport: mySport,
@@ -214,12 +436,43 @@ export default function BattlesScreen() {
         profile_id: string;
         handle: string;
         school_name: string | null;
+        value: number;
       }> | null) ?? [];
       const top = rows.find((r) => r.profile_id !== me?.id);
       if (!top) return null;
-      return { profile_id: top.profile_id, handle: top.handle, school: top.school_name };
+      // Pull the opponent's avatar for the populated VS card.
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('id', top.profile_id)
+        .maybeSingle();
+      return {
+        profile_id: top.profile_id,
+        handle: top.handle,
+        school: top.school_name,
+        avatar_url: (prof as { avatar_url: string | null } | null)?.avatar_url ?? null,
+        value: top.value,
+      };
     },
   });
+
+  // The catalog row for the primary metric — used to label the BoTW VS card
+  // (e.g. "40-YD DASH") and to format my matching mark + margin in tokens.
+  const primaryMetric = useMemo<MetricRow | null>(() => {
+    if (!primaryMetricKey) return null;
+    return (
+      (catalogQ.data ?? []).find(
+        (m) => m.sport === mySport && m.key === primaryMetricKey,
+      ) ?? null
+    );
+  }, [catalogQ.data, mySport, primaryMetricKey]);
+
+  // My current mark on the same metric (if any) — drives the populated left
+  // side of the VS card and the "Margin" footer.
+  const myPrimaryStat = useMemo<PlayerStat | null>(() => {
+    if (!primaryMetric) return null;
+    return myStats.find((s) => s.metric.id === primaryMetric.id) ?? null;
+  }, [myStats, primaryMetric]);
 
   // "NEARBY" — opt-in, location-driven discovery. Tapping the CTA hits the
   // foreground permission once; coords are never stored (see useNearbySchools).
@@ -295,30 +548,120 @@ export default function BattlesScreen() {
     const isSearching = query.trim().length >= 2;
     const hasAnyDiscovery = schoolResults.length > 0 || nearbyResults.length > 0;
 
+    // ── Battle of the Week — populate from prod, else fall back to the
+    // demo rivalry in DEV so the hero card is never empty during build /
+    // QA. Production with no data still goes through the same loading /
+    // error states; this branch is gated on `__DEV__`.
+    const botwLoading = botwQ.isLoading || catalogQ.isLoading;
+    const botwError = botwQ.isError || catalogQ.isError;
+
+    type BotwView = {
+      meHandle: string;
+      meAvatarUrl?: string;
+      meValue: string;
+      meValueNum: number | null;
+      oppHandle: string;
+      oppAvatarUrl?: string;
+      oppValue: string;
+      oppValueNum: number;
+      metric: MetricRow | null;
+      metricLabel: string;
+      onBeatIt: () => void;
+    };
+
+    let botwView: BotwView | null = null;
+    if (botwQ.data && primaryMetric) {
+      const opp = botwQ.data;
+      botwView = {
+        meHandle: me?.handle ?? 'you',
+        meAvatarUrl: me?.avatar_url ?? undefined,
+        meValue: myPrimaryStat
+          ? `${formatStatValue(myPrimaryStat.value, primaryMetric.unit)}${primaryMetric.unit ?? ''}`
+          : '—',
+        meValueNum: myPrimaryStat?.value ?? null,
+        oppHandle: opp.handle,
+        oppAvatarUrl: opp.avatar_url ?? undefined,
+        oppValue: `${formatStatValue(opp.value, primaryMetric.unit)}${primaryMetric.unit ?? ''}`,
+        oppValueNum: opp.value,
+        metric: primaryMetric,
+        metricLabel: primaryMetric.label,
+        onBeatIt: () => setOpponentId(opp.profile_id),
+      };
+    } else if (__DEV__ && !botwLoading && !botwError) {
+      // Demo fallback — DEMO_CURRENT_USER vs DEMO_RIVAL, 40-yd dash.
+      botwView = {
+        meHandle: DEMO_CURRENT_USER.handle,
+        meAvatarUrl: DEMO_CURRENT_USER.avatarUrl,
+        meValue: DEMO_CURRENT_USER.value,
+        meValueNum: DEMO_CURRENT_USER.rawValue,
+        oppHandle: DEMO_RIVAL.handle,
+        oppAvatarUrl: DEMO_RIVAL.avatarUrl,
+        oppValue: DEMO_RIVAL.value,
+        oppValueNum: DEMO_RIVAL.rawValue,
+        metric: null,
+        metricLabel: '40-yd Dash',
+        // Demo-only: no real opponent id to route to, so the press just
+        // selection-haptics. Real production data wires through onBeatIt.
+        onBeatIt: () => Haptics.selectionAsync(),
+      };
+    }
+
+    // Winner + margin caption. Honors `direction` when we have the metric
+    // (lower-better for 40-yd, higher-better for vert). Falls back to a
+    // lower-better assumption for the demo rivalry (40-yd dash).
+    let botwWinner: Winner | null = null;
+    let botwMargin: string | null = null;
+    if (botwView && botwView.meValueNum != null) {
+      const m = botwView.meValueNum;
+      const o = botwView.oppValueNum;
+      if (m === o) botwWinner = 'tie';
+      else {
+        const lowerBetter =
+          botwView.metric?.direction === 'lower_better' || botwView.metric == null;
+        botwWinner = lowerBetter
+          ? m < o
+            ? 'me'
+            : 'opp'
+          : m > o
+            ? 'me'
+            : 'opp';
+      }
+      botwMargin = botwView.metric
+        ? formatMargin(botwView.metric, m, o)
+        : `Margin: ${Math.abs(m - o).toFixed(2)}s`;
+    }
+
     return (
       <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top }}>
+        {/* Sticky header — screen title + caption. Sits on `paper` with a
+            hairline underline. No accent here; ember is reserved for the
+            "Beat it" CTA and live winning side in the hero VS card. */}
+        <View
+          style={{
+            backgroundColor: colors.paper,
+            paddingHorizontal: SCREEN_PADDING,
+            paddingTop: space[3],
+            paddingBottom: space[4],
+          }}
+        >
+          <Txt
+            variant="display3"
+            weight="bold"
+            accessibilityRole="header"
+          >
+            Battles
+          </Txt>
+          <Txt variant="bodySm" tone="ash" style={{ marginTop: space[1] }}>
+            Line up your stats against another athlete in {sportLabel ?? 'your sport'}.
+          </Txt>
+        </View>
+        <HairlineRule />
+
         <ScrollView
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingBottom: insets.bottom + space[10] }}
         >
-          {/* Masthead — title + sport line. No orange in the header; the
-              accent waits for a winning comparison row. */}
-          <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[7] }}>
-            <MicroLabel>HEAD TO HEAD</MicroLabel>
-            <Txt
-              variant="display3"
-              weight="bold"
-              accessibilityRole="header"
-              style={{ marginTop: space[2] }}
-            >
-              Battles
-            </Txt>
-            <Txt variant="bodyLg" tone="ash" style={{ marginTop: space[2] }}>
-              Line up your stats against another athlete in {sportLabel ?? 'your sport'}.
-            </Txt>
-          </View>
-
           {primarySportMissing && !sportPromptDismissed ? (
             <View style={{ paddingHorizontal: SCREEN_PADDING, marginTop: space[5] }}>
               <Card
@@ -331,7 +674,7 @@ export default function BattlesScreen() {
                   paddingVertical: space[3],
                 }}
               >
-                <AppIcon name="Swords" size={16} tone="ember" />
+                <AppIcon name="Swords" size={16} tone="ash" />
                 <Pressable
                   onPress={() => router.push('/(tabs)/you?edit=1' as never)}
                   style={{ flex: 1 }}
@@ -357,85 +700,66 @@ export default function BattlesScreen() {
             </View>
           ) : null}
 
-          {/* BATTLE OF THE WEEK — the anti-dead-end CTA. Pre-populated VS
-              the top athlete at the user's school (or top everyone if no
-              school). Tap to enter the comparison view straight away. */}
-          {botwQ.data ? (
-            <View style={{ paddingHorizontal: SCREEN_PADDING, marginTop: space[5] }}>
-              <Card tone="surface" padded style={{ gap: space[4] }}>
+          {/* BATTLE OF THE WEEK — populated hero VS card. Three states are
+              explicit: skeleton while loading, inline error if the RPC
+              failed, populated card otherwise (with the demo fallback in
+              __DEV__). The whole module sits on overlay so it reads as the
+              single hero of the screen. */}
+          <View style={{ paddingHorizontal: SCREEN_PADDING, marginTop: space[5] }}>
+            {botwLoading ? (
+              <BattleOfWeekSkeleton />
+            ) : botwError ? (
+              <Card tone="overlay" padded>
                 <View
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <MicroLabel style={{ color: colors.ember }}>BATTLE OF THE WEEK</MicroLabel>
-                  <MicroLabel tone="ash">
-                    {me?.school_id ? 'AT YOUR SCHOOL' : 'EVERYWHERE'}
-                  </MicroLabel>
-                </View>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
                     gap: space[3],
                   }}
                 >
-                  <View style={{ flex: 1, alignItems: 'center', gap: space[2] }}>
-                    <Avatar uri={me?.avatar_url ?? undefined} size={56} />
-                    <Txt variant="bodySm" weight="semibold" numberOfLines={1}>
-                      @{me?.handle ?? 'you'}
+                  <AppIcon name="Swords" size={20} tone="ash" />
+                  <View style={{ flex: 1 }}>
+                    <Txt variant="body" weight="semibold">
+                      Couldn&apos;t load this week&apos;s battle.
                     </Txt>
-                  </View>
-                  <View
-                    style={{
-                      width: 40,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Score value="VS" size="sm" tone="ember" />
-                  </View>
-                  <View style={{ flex: 1, alignItems: 'center', gap: space[2] }}>
-                    <Avatar size={56} />
-                    <Txt variant="bodySm" weight="semibold" numberOfLines={1}>
-                      @{botwQ.data.handle}
+                    <Txt variant="bodySm" tone="ash" style={{ marginTop: 2 }}>
+                      Pull to refresh, or pick an opponent below.
                     </Txt>
-                    {botwQ.data.school ? (
-                      <Txt variant="micro" tone="ash" numberOfLines={1}>
-                        {botwQ.data.school}
-                      </Txt>
-                    ) : null}
                   </View>
                 </View>
-                <PrimaryButton
-                  label="BATTLE NOW"
-                  full
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    setOpponentId(botwQ.data!.profile_id);
-                  }}
-                />
               </Card>
-            </View>
-          ) : null}
+            ) : botwView ? (
+              <BattleOfWeekCard
+                meHandle={botwView.meHandle}
+                meAvatarUrl={botwView.meAvatarUrl}
+                meValue={botwView.meValue}
+                oppHandle={botwView.oppHandle}
+                oppAvatarUrl={botwView.oppAvatarUrl}
+                oppValue={botwView.oppValue}
+                metricLabel={botwView.metricLabel}
+                marginLabel={botwMargin}
+                endsLabel="Ends Sunday"
+                winner={botwWinner}
+                onBeatIt={botwView.onBeatIt}
+              />
+            ) : null}
+          </View>
 
           {(
             <>
-              {/* Search input — Strava-style pill: rounded Card with a Search
-                  icon prefix. The query drives the TRENDING section below. */}
+              {/* Search input — Strava-style pill. `surface` bg, full
+                  radius, Lucide Search icon, ash placeholder. Tokens only. */}
               <View style={{ paddingHorizontal: SCREEN_PADDING, paddingTop: space[6] }}>
-                <Card
-                  tone="surface"
+                <View
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
                     gap: space[3],
+                    backgroundColor: colors.surface,
+                    borderRadius: radius.full,
                     paddingHorizontal: space[4],
                     paddingVertical: space[3],
-                    borderRadius: 999,
+                    minHeight: 44,
                   }}
                 >
                   <AppIcon name="Search" size={18} tone="ash" />
@@ -472,7 +796,7 @@ export default function BattlesScreen() {
                       <AppIcon name="X" size={16} tone="ash" />
                     </Pressable>
                   ) : null}
-                </Card>
+                </View>
               </View>
 
               {/* TRENDING — search results when the query is active. Same row
@@ -595,22 +919,19 @@ export default function BattlesScreen() {
               )}
 
               {/* Empty state — only when neither query nor discovery has any
-                  rows to show. Centered Swords + a directive headline. */}
+                  rows to show. EmptyState composite with on-voice line +
+                  primary CTA so the screen never dead-ends. */}
               {!isSearching && !hasAnyDiscovery ? (
-                <View
-                  style={{
-                    paddingHorizontal: SCREEN_PADDING,
-                    paddingVertical: space[9],
-                    alignItems: 'center',
+                <EmptyState
+                  icon="Swords"
+                  title="No battles yet."
+                  body="Challenge a rival on the board — they show up here the second they accept."
+                  ctaLabel="OPEN THE BOARD"
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    router.push('/(tabs)/index' as never);
                   }}
-                >
-                  <View style={{ marginBottom: space[4] }}>
-                    <AppIcon name="Swords" size={48} tone="ash" />
-                  </View>
-                  <Txt variant="display4" weight="bold" style={{ textAlign: 'center' }}>
-                    Find someone to battle.
-                  </Txt>
-                </View>
+                />
               ) : null}
             </>
           )}
