@@ -245,7 +245,8 @@ export default function ConfirmStatScreen() {
             {error && (
               <Txt
                 variant="bodySm"
-                style={{ marginTop: space[3], color: colors.error }}
+                tone="error"
+                style={{ marginTop: space[3] }}
                 accessibilityLiveRegion="polite"
               >
                 {error}

@@ -167,7 +167,7 @@ export default function SchoolConfirmFeed() {
           <View style={{ marginBottom: space[4] }}>
             <Txt
               variant="bodySm"
-              style={{ color: colors.error }}
+              tone="error"
               accessibilityLiveRegion="polite"
             >
               {error}

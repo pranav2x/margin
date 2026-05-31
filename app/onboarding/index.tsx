@@ -366,17 +366,14 @@ export default function Onboarding() {
             label="HANDLE"
             helper={
               <MicroLabel
-                tone="ash"
-                style={{
-                  marginTop: space[2],
-                  marginLeft: space[1],
-                  color:
-                    handleStatus === 'available'
-                      ? colors.success
-                      : handleStatus === 'taken' || handleStatus === 'invalid'
-                        ? colors.error
-                        : undefined,
-                }}
+                tone={
+                  handleStatus === 'available'
+                    ? 'success'
+                    : handleStatus === 'taken' || handleStatus === 'invalid'
+                      ? 'error'
+                      : 'ash'
+                }
+                style={{ marginTop: space[2], marginLeft: space[1] }}
               >
                 {handleStatusLabel()}
               </MicroLabel>
@@ -643,7 +640,8 @@ export default function Onboarding() {
         {saveError && (
           <Txt
             variant="bodySm"
-            style={{ marginBottom: space[3], textAlign: 'center', color: colors.error }}
+            tone="error"
+            style={{ marginBottom: space[3], textAlign: 'center' }}
             accessibilityLiveRegion="polite"
           >
             {saveError}

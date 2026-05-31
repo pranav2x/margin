@@ -11,6 +11,7 @@ import {
   Eye,
   Flame,
   Heart,
+  Lock,
   MessageCircle,
   MessageSquare,
   MoreHorizontal,
@@ -69,6 +70,7 @@ export const Icons = {
   Video,
   Activity,
   Target,
+  Lock,
 } as const;
 
 export type IconName = keyof typeof Icons;

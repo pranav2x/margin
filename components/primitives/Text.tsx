@@ -22,7 +22,7 @@ export interface TxtProps extends RNTextProps {
   italic?: boolean;
   /** Explicit Inter weight override. Wins over `italic` if both are set. */
   weight?: Weight;
-  tone?: 'ink' | 'ash' | 'paper' | 'shadow' | 'ember';
+  tone?: 'ink' | 'ash' | 'paper' | 'shadow' | 'ember' | 'error' | 'success';
   inverted?: boolean;
   style?: TextStyle | TextStyle[];
 }
@@ -45,6 +45,8 @@ export function Txt({
   else if (tone === 'paper') color = colors.paper;
   else if (tone === 'shadow') color = colors.shadow;
   else if (tone === 'ember') color = colors.ember;
+  else if (tone === 'error') color = colors.error;
+  else if (tone === 'success') color = colors.success;
 
   if (inverted) {
     if (tone === 'ink') color = colors.paper;

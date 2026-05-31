@@ -118,7 +118,7 @@ export default function AgeGate() {
             alignItems: 'center',
           }}
         >
-          <AppIcon name="Snowflake" size={28} tone="ember" />
+          <AppIcon name="Lock" size={28} tone="ember" />
           <MicroLabel
             tone="ink"
             style={{ marginTop: space[4], textAlign: 'center' }}
@@ -197,7 +197,8 @@ export default function AgeGate() {
         {error && (
           <Txt
             variant="bodySm"
-            style={{ marginTop: space[3], textAlign: 'center', color: colors.error }}
+            tone="error"
+            style={{ marginTop: space[3], textAlign: 'center' }}
             accessibilityLiveRegion="polite"
           >
             {error}

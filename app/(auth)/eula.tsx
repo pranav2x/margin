@@ -186,7 +186,8 @@ export default function Eula() {
         {error && (
           <Txt
             variant="bodySm"
-            style={{ marginBottom: space[4], color: colors.error }}
+            tone="error"
+            style={{ marginBottom: space[4] }}
             accessibilityLiveRegion="polite"
           >
             {error}
