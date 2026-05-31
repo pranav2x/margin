@@ -10,7 +10,7 @@ import { MicroLabel } from '../../components/primitives/MicroLabel';
 import { HairlineRule } from '../../components/primitives/HairlineRule';
 import { PrimaryButton } from '../../components/primitives/PrimaryButton';
 import { AppIcon } from '../../components/primitives/AppIcon';
-import { useTheme, space, SCREEN_PADDING } from '../../theme';
+import { useTheme, space, radius, SCREEN_PADDING } from '../../theme';
 import { supabase } from '../../lib/supabase';
 
 const RULES: string[] = [
@@ -30,7 +30,7 @@ function Checkbox({ checked }: { checked: boolean }) {
       style={{
         width: CHECKBOX_SIZE,
         height: CHECKBOX_SIZE,
-        borderRadius: 4,
+        borderRadius: radius.xs,
         borderWidth: 1,
         borderColor: checked ? colors.ember : colors.ink,
         backgroundColor: checked ? colors.ember : 'transparent',
@@ -186,8 +186,7 @@ export default function Eula() {
         {error && (
           <Txt
             variant="bodySm"
-            tone="ash"
-            style={{ marginBottom: space[4] }}
+            style={{ marginBottom: space[4], color: colors.error }}
             accessibilityLiveRegion="polite"
           >
             {error}

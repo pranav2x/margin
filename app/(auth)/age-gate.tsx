@@ -197,8 +197,7 @@ export default function AgeGate() {
         {error && (
           <Txt
             variant="bodySm"
-            tone="ash"
-            style={{ marginTop: space[3], textAlign: 'center' }}
+            style={{ marginTop: space[3], textAlign: 'center', color: colors.error }}
             accessibilityLiveRegion="polite"
           >
             {error}
