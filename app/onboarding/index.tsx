@@ -12,7 +12,7 @@ import { PrimaryButton } from '../../components/primitives/PrimaryButton';
 import { Card } from '../../components/primitives/Card';
 import { StatBlock } from '../../components/primitives/StatBlock';
 import { AppIcon } from '../../components/primitives/AppIcon';
-import { useTheme, space, SCREEN_PADDING, type, fonts } from '../../theme';
+import { useTheme, space, radius, SCREEN_PADDING, type, fonts } from '../../theme';
 import { supabase } from '../../lib/supabase';
 import { recordActivity } from '../../lib/hooks/useStreak';
 import { useNearbySchools, type NearbySchool } from '../../lib/hooks/useNearbySchools';
@@ -37,6 +37,27 @@ function normalizeHandle(raw: string): string {
 // Onboarding lives in two logical steps. We surface that explicitly at the top
 // of each step so the form never feels open-ended.
 const TOTAL_STEPS = 2;
+
+// Step indicator — two 4pt rails, ember on completed step, fog on pending.
+// Sits above the MicroLabel for a visual proof of progress without text noise.
+function StepRail({ index }: { index: 0 | 1 }) {
+  const { colors } = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', gap: space[2], marginBottom: space[3] }}>
+      {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+        <View
+          key={i}
+          style={{
+            flex: 1,
+            height: 4,
+            borderRadius: radius.full,
+            backgroundColor: i <= index ? colors.ember : colors.fog,
+          }}
+        />
+      ))}
+    </View>
+  );
+}
 
 interface FieldProps {
   label: string;
@@ -83,8 +104,8 @@ function SportPills({
             accessibilityState={{ selected: active }}
             style={{
               paddingHorizontal: space[4],
-              minHeight: 40,
-              borderRadius: 20,
+              minHeight: 44,
+              borderRadius: radius.full,
               borderWidth: 1,
               borderColor: active ? colors.ember : colors.fog,
               backgroundColor: active ? colors.ember : colors.surface,
@@ -320,9 +341,10 @@ export default function Onboarding() {
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{
             paddingHorizontal: SCREEN_PADDING,
-            paddingBottom: insets.bottom + 120,
+            paddingBottom: insets.bottom + space[11],
           }}
         >
+          <StepRail index={0} />
           <MicroLabel>STEP 1 OF {TOTAL_STEPS}</MicroLabel>
           <Txt
             variant="display3"
@@ -344,8 +366,17 @@ export default function Onboarding() {
             label="HANDLE"
             helper={
               <MicroLabel
-                tone={handleStatus === 'available' ? 'ink' : 'ash'}
-                style={{ marginTop: space[2], marginLeft: space[1] }}
+                tone="ash"
+                style={{
+                  marginTop: space[2],
+                  marginLeft: space[1],
+                  color:
+                    handleStatus === 'available'
+                      ? colors.success
+                      : handleStatus === 'taken' || handleStatus === 'invalid'
+                        ? colors.error
+                        : undefined,
+                }}
               >
                 {handleStatusLabel()}
               </MicroLabel>
@@ -445,6 +476,7 @@ export default function Onboarding() {
       }}
     >
       <View style={{ paddingHorizontal: SCREEN_PADDING }}>
+        <StepRail index={1} />
         <MicroLabel>STEP 2 OF {TOTAL_STEPS}</MicroLabel>
         <Txt
           variant="display3"
@@ -611,8 +643,7 @@ export default function Onboarding() {
         {saveError && (
           <Txt
             variant="bodySm"
-            tone="ink"
-            style={{ marginBottom: space[3], textAlign: 'center' }}
+            style={{ marginBottom: space[3], textAlign: 'center', color: colors.error }}
             accessibilityLiveRegion="polite"
           >
             {saveError}
