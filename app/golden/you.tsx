@@ -85,7 +85,7 @@ export default function GoldenYou() {
         {/* ── Masthead ───────────────────────────────────────────────────── */}
         <View style={{ paddingHorizontal: SCREEN_PADDING, paddingBottom: space[5] }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[4] }}>
-            <Avatar uri={user.avatarUrl} size={72} />
+            <Avatar uri={user.avatarUrl} seed={user.handle} size={72} />
             <View style={{ flex: 1, gap: 2 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
                 <Txt variant="display4" weight="extrabold">{user.fullName}</Txt>
@@ -219,7 +219,7 @@ export default function GoldenYou() {
           <Card padded tone="overlay">
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
               <View style={{ flex: 1, alignItems: 'center' }}>
-                <Avatar size={48} />
+                <Avatar seed={user.handle} size={48} />
                 <Txt
                   variant="bodySm"
                   weight="semibold"
@@ -234,7 +234,7 @@ export default function GoldenYou() {
                 <Txt variant="display4" weight="extrabold" tone="ash">vs</Txt>
               </View>
               <View style={{ flex: 1, alignItems: 'center' }}>
-                <Avatar size={48} />
+                <Avatar seed={DEMO_RIVAL.handle} size={48} />
                 <Txt
                   variant="bodySm"
                   weight="semibold"

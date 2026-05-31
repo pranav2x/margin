@@ -477,7 +477,7 @@ export default function YouScreen() {
           <View
             style={{ flexDirection: 'row', alignItems: 'center', gap: space[4] }}
           >
-            <Avatar uri={avatarUri ?? undefined} size={72} />
+            <Avatar uri={avatarUri ?? undefined} seed={handleStr} size={72} />
             <View style={{ flex: 1, gap: 2 }}>
               <View
                 style={{
@@ -691,7 +691,7 @@ export default function YouScreen() {
                 }}
               >
                 <View style={{ flex: 1, alignItems: 'center' }}>
-                  <Avatar uri={avatarUri ?? undefined} size={48} />
+                  <Avatar uri={avatarUri ?? undefined} seed={handleStr} size={48} />
                   <Txt
                     variant="bodySm"
                     weight="semibold"
@@ -713,7 +713,7 @@ export default function YouScreen() {
                   </Txt>
                 </View>
                 <View style={{ flex: 1, alignItems: 'center' }}>
-                  <Avatar size={48} />
+                  <Avatar seed={rivalHandle} size={48} />
                   <Txt
                     variant="bodySm"
                     weight="semibold"

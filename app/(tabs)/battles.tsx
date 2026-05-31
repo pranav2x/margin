@@ -223,7 +223,7 @@ function BattleOfWeekCard({
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
         <View style={{ flex: 1, alignItems: 'center' }}>
-          <Avatar uri={meAvatarUrl} size={56} />
+          <Avatar uri={meAvatarUrl} seed={meHandle} size={56} />
           <Txt
             variant="bodySm"
             weight="semibold"
@@ -245,7 +245,7 @@ function BattleOfWeekCard({
           </Txt>
         </View>
         <View style={{ flex: 1, alignItems: 'center' }}>
-          <Avatar uri={oppAvatarUrl} size={56} />
+          <Avatar uri={oppAvatarUrl} seed={oppHandle} size={56} />
           <Txt
             variant="bodySm"
             weight="semibold"
@@ -1001,7 +1001,7 @@ export default function BattlesScreen() {
             }}
           >
             <View style={{ flex: 1, alignItems: 'center', gap: space[3] }}>
-              <Avatar uri={me?.avatar_url ?? undefined} size={88} />
+              <Avatar uri={me?.avatar_url ?? undefined} seed={me?.handle ?? 'you'} size={88} />
               <Txt
                 variant="bodyLg"
                 weight="semibold"
@@ -1036,7 +1036,7 @@ export default function BattlesScreen() {
             </View>
 
             <View style={{ flex: 1, alignItems: 'center', gap: space[3] }}>
-              <Avatar uri={opp?.avatar_url ?? undefined} size={88} />
+              <Avatar uri={opp?.avatar_url ?? undefined} seed={opp?.handle ?? ''} size={88} />
               <Txt
                 variant="bodyLg"
                 weight="semibold"

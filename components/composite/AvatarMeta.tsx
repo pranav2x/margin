@@ -37,7 +37,7 @@ export function AvatarMeta({
 
   const body = (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
-      <Avatar uri={avatarUrl} size={avatarSize} />
+      <Avatar uri={avatarUrl} seed={handle} size={avatarSize} />
       <View style={{ flex: 1 }}>
         <Txt variant="bodyLg" weight="semibold" numberOfLines={1}>
           @{handle}

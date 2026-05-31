@@ -221,7 +221,7 @@ export default function PlayerProfile() {
             alignItems: 'center',
           }}
         >
-          <Avatar uri={profile.avatar_url ?? undefined} size={96} />
+          <Avatar uri={profile.avatar_url ?? undefined} seed={profile.handle ?? undefined} size={96} />
           <Txt
             variant="display3"
             weight="bold"

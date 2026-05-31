@@ -26,7 +26,7 @@ import {
   type Sport,
 } from '../../lib/hooks/usePlayerProfile';
 import { useTheme, space, radius, SCREEN_PADDING } from '../../theme';
-import { DEMO_FORTY_BOARD } from '../../data/fixtures/demoAthletes';
+import { DEMO_FORTY_BOARD, DEMO_METRICS } from '../../data/fixtures/demoAthletes';
 
 interface LbRow {
   rank: number;
@@ -95,11 +95,17 @@ export default function BoardsScreen() {
   );
   // Segmented controls cap at ~5 options; per spec we show the top 4 metrics
   // for the current sport. Anything deeper belongs in a sheet (Phase 2).
-  const metricOptions = useMemo(
-    () =>
-      metricsForSport.slice(0, 4).map((m) => ({ key: m.key, label: m.label })),
-    [metricsForSport],
-  );
+  // DEV fallback: when the sport_metrics catalog is empty (fresh Supabase
+  // project / unseeded environment), seed the rail with DEMO_METRICS so the
+  // header doesn't collapse to a loading skeleton during review.
+  const metricOptions = useMemo(() => {
+    const real = metricsForSport.slice(0, 4).map((m) => ({ key: m.key, label: m.label }));
+    if (real.length > 0) return real;
+    if (__DEV__ && !catalogQ.isLoading && sport === 'football') {
+      return DEMO_METRICS.slice(0, 4).map((m) => ({ key: m.key, label: m.label }));
+    }
+    return real;
+  }, [metricsForSport, catalogQ.isLoading, sport]);
   const currentMetric = metricsForSport.find((m) => m.key === metricKey) ?? null;
 
   useEffect(() => {

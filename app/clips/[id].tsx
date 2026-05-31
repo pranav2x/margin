@@ -208,7 +208,7 @@ function ClipPlayer({ clip, bottomInset }: ClipPlayerProps) {
             gap: space[3],
           }}
         >
-          <Avatar uri={clip.author.avatar} size={40} />
+          <Avatar uri={clip.author.avatar} seed={clip.author.handle} size={40} />
           <Txt
             variant="bodyLg"
             weight="semibold"
