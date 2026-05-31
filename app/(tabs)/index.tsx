@@ -1,20 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { View, ScrollView, Pressable } from 'react-native';
+import { View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
 
 import { Txt } from '../../components/primitives/Text';
 import { MicroLabel } from '../../components/primitives/MicroLabel';
 import { HairlineRule } from '../../components/primitives/HairlineRule';
-import { AppIcon } from '../../components/primitives/AppIcon';
-import { Card } from '../../components/primitives/Card';
-import { Score } from '../../components/motion/Score';
-import { TabPill } from '../../components/composite/TabPill';
-import { SportChip, SPORT_GLYPHS } from '../../components/primitives/SportChip';
 import { Segmented } from '../../components/primitives/Segmented';
+import { FilterChip } from '../../components/primitives/FilterChip';
+import { Skeleton } from '../../components/primitives/Skeleton';
 import {
   LeaderboardRow,
   type LeaderboardRowData,
@@ -23,14 +19,14 @@ import { tierOf } from '../../components/primitives/VerifiedBadge';
 import { EmptyState } from '../../components/composite/EmptyState';
 import { supabase } from '../../lib/supabase';
 import {
-  SPORTS,
   SPORT_LABELS,
   formatStatValue,
   useMetricCatalog,
   useMyProfile,
   type Sport,
 } from '../../lib/hooks/usePlayerProfile';
-import { useTheme, space, SCREEN_PADDING } from '../../theme';
+import { useTheme, space, radius, SCREEN_PADDING } from '../../theme';
+import { DEMO_FORTY_BOARD } from '../../data/fixtures/demoAthletes';
 
 interface LbRow {
   rank: number;
@@ -43,23 +39,29 @@ interface LbRow {
   ranked: boolean;
 }
 
-const SCOPES = [
-  { key: 'everyone', label: 'Everyone', phrase: 'EVERYWHERE' },
-  { key: 'nearby', label: 'Nearby', phrase: 'NEARBY' },
-  { key: 'school', label: 'My School', phrase: 'AT YOUR SCHOOL' },
-] as const;
-type Scope = (typeof SCOPES)[number]['key'];
+type Scope = 'everyone' | 'nearby' | 'school';
 
-function toRowData(row: LbRow): LeaderboardRowData {
-  return {
-    rank: row.rank,
-    handle: row.handle,
-    school: row.school_name,
-    value: '', // value formatting needs the unit, filled at render time
-    tier: tierOf(row.verified, row.verification_method),
-  };
-}
+const SCOPE_OPTIONS: ReadonlyArray<{ key: Scope; label: string }> = [
+  { key: 'everyone', label: 'Everyone' },
+  { key: 'nearby', label: 'Nearby' },
+  { key: 'school', label: 'My School' },
+];
 
+/**
+ * Boards — production leaderboard, restyled to match the Phase 0 golden
+ * reference. Real Supabase data drives the list; the only fixture fallback is
+ * a DEV-only populated demo so reviewers don't see a blank board on a fresh
+ * environment (prod still ships the proper EmptyState).
+ *
+ * Selection rows are capped at two per spec:
+ *   1. Primary  — `Segmented` for the metric (first ≤4 of the current sport).
+ *   2. Secondary — `Segmented` (scope) + a single sport `FilterChip` (Phase 2
+ *      opens a sheet; for now it's a no-op affordance with the Trophy glyph).
+ *
+ * No emoji, no second accent, no podium. Ember lives only on the #1 rank, the
+ * current-user row trailing value, and the active filter chip — combined that
+ * stays well under the 10% pixel budget.
+ */
 export default function BoardsScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -69,15 +71,13 @@ export default function BoardsScreen() {
   const myId = profileQ.data?.id ?? null;
   const hasSchool = !!profileQ.data?.school_id;
 
-  // Default scope = Everyone. Once the user has a school, the default flips
-  // to My School the first time the screen mounts — but they can flip back.
   const [sport, setSport] = useState<Sport>('football');
   const [scope, setScope] = useState<Scope>('everyone');
   const [metricKey, setMetricKey] = useState<string>('');
-  const [verifiedOnly, setVerifiedOnly] = useState(false);
-  const [schoolPromptDismissed, setSchoolPromptDismissed] = useState(false);
   const [appliedSchoolDefault, setAppliedSchoolDefault] = useState(false);
 
+  // Default to My School the first time we see a school-bound profile; user
+  // can flip back at will.
   useEffect(() => {
     if (hasSchool && !appliedSchoolDefault) {
       setScope('school');
@@ -93,23 +93,33 @@ export default function BoardsScreen() {
         .sort((a, b) => a.sort_order - b.sort_order),
     [catalogQ.data, sport],
   );
+  // Segmented controls cap at ~5 options; per spec we show the top 4 metrics
+  // for the current sport. Anything deeper belongs in a sheet (Phase 2).
+  const metricOptions = useMemo(
+    () =>
+      metricsForSport.slice(0, 4).map((m) => ({ key: m.key, label: m.label })),
+    [metricsForSport],
+  );
   const currentMetric = metricsForSport.find((m) => m.key === metricKey) ?? null;
 
   useEffect(() => {
-    if (metricsForSport.length > 0 && !metricsForSport.some((m) => m.key === metricKey)) {
-      setMetricKey(metricsForSport[0].key);
+    if (
+      metricOptions.length > 0 &&
+      !metricOptions.some((m) => m.key === metricKey)
+    ) {
+      setMetricKey(metricOptions[0].key);
     }
-  }, [metricsForSport, metricKey]);
+  }, [metricOptions, metricKey]);
 
   const boardQ = useQuery({
-    queryKey: ['leaderboard', sport, metricKey, scope, verifiedOnly],
+    queryKey: ['leaderboard', sport, metricKey, scope],
     enabled: !!metricKey,
     queryFn: async (): Promise<LbRow[]> => {
       const { data, error } = await supabase.rpc('leaderboard', {
         p_sport: sport,
         p_metric_key: metricKey,
         p_scope: scope,
-        p_only_verified: verifiedOnly,
+        p_only_verified: false,
         p_limit: 100,
       });
       if (error) throw error;
@@ -117,385 +127,223 @@ export default function BoardsScreen() {
     },
   });
 
-  const pctQ = useQuery({
-    queryKey: ['percentile', sport, metricKey, scope],
-    enabled: !!metricKey,
-    queryFn: async (): Promise<number | null> => {
-      const { data, error } = await supabase.rpc('my_percentile', {
-        p_sport: sport,
-        p_metric_key: metricKey,
-        p_scope: scope,
-      });
-      if (error) throw error;
-      return (data as number | null) ?? null;
-    },
-  });
-
   const rows = boardQ.data ?? [];
-  const scopeMeta = SCOPES.find((s) => s.key === scope)!;
-  const pct = pctQ.data;
   const unit = currentMetric?.unit ?? null;
 
-  // Find me + my closest rival in the board. The rival is whoever sits one
-  // rank above me (since we render highest-first that's index myIdx - 1).
-  const myIdx = myId ? rows.findIndex((r) => r.profile_id === myId) : -1;
-  const me = myIdx >= 0 ? rows[myIdx] : null;
-  const rival = myIdx > 0 ? rows[myIdx - 1] : null;
+  // DEV fallback only — when the real RPC returns nothing in development, swap
+  // in the demo board so the layout reads populated for design review. Prod
+  // gets the proper EmptyState so users never see seeded names as their own.
+  const useDemoFallback =
+    __DEV__ && !boardQ.isLoading && !boardQ.isError && rows.length === 0;
 
-  // Top 3 = podium. Everyone else renders as standard rows.
-  const podium = rows.slice(0, 3);
-  const restRaw = rows.slice(3);
-  // Drop my row from the body if it's in the podium or in `rest` — we re-pin
-  // it at the bottom so it's always visible.
-  const rest = me ? restRaw.filter((r) => r.profile_id !== myId) : restRaw;
-  const pinnedMe = me && myIdx >= 3 ? me : null;
+  const displayRows: LeaderboardRowData[] = useDemoFallback
+    ? DEMO_FORTY_BOARD.map((a) => ({
+        rank: a.rank,
+        handle: a.handle,
+        school: a.school,
+        avatarUrl: a.avatarUrl,
+        value: a.value,
+        weeklyDelta: a.weeklyDelta,
+        tier: a.tier,
+      }))
+    : rows.map((r) => ({
+        rank: r.rank,
+        handle: r.handle,
+        school: r.school_name,
+        value: formatStatValue(r.value, unit),
+        tier: tierOf(r.verified, r.verification_method),
+      }));
 
-  const showSchoolPrompt =
-    !hasSchool && !schoolPromptDismissed && scope === 'everyone';
+  const demoCurrentIdx = useDemoFallback
+    ? DEMO_FORTY_BOARD.findIndex((a) => a.isCurrentUser)
+    : -1;
 
+  // ── Header (sticky in the FlashList) ──────────────────────────────────────
   const header = (
-    <View style={{ paddingTop: space[5] }}>
-      {/* Masthead */}
-      <View style={{ paddingHorizontal: SCREEN_PADDING, marginBottom: space[5] }}>
+    <View style={{ backgroundColor: colors.paper }}>
+      <View
+        style={{
+          paddingHorizontal: SCREEN_PADDING,
+          paddingTop: space[3],
+          paddingBottom: space[4],
+        }}
+      >
         <MicroLabel>LEADERBOARDS</MicroLabel>
         <Txt
           variant="display3"
-          weight="extrabold"
           accessibilityRole="header"
           style={{ marginTop: space[2] }}
         >
           Boards
         </Txt>
-        {currentMetric ? (
-          <Txt variant="bodySm" tone="ash" style={{ marginTop: space[1] }}>
-            {SPORT_LABELS[sport]} · {currentMetric.label}
-            {currentMetric.unit ? ` (${currentMetric.unit})` : ''}
-          </Txt>
-        ) : null}
-      </View>
+        <Txt variant="bodySm" tone="ash" style={{ marginTop: space[1] }}>
+          {currentMetric
+            ? `${SPORT_LABELS[sport]} · ${currentMetric.label}${
+                currentMetric.unit ? ` (${currentMetric.unit})` : ''
+              }`
+            : `Live across ${displayRows.length} athletes`}
+        </Txt>
 
-      {/* Sport rail — SportChip horizontal scroller. The trailing padding lets
-          the last chip half-peek at the screen edge, signalling "scroll me". */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingHorizontal: SCREEN_PADDING,
-          paddingRight: SCREEN_PADDING + space[8],
-          gap: space[2],
-        }}
-        style={{ flexGrow: 0 }}
-      >
-        {SPORTS.map((s) => (
-          <SportChip
-            key={s}
-            glyph={SPORT_GLYPHS[s] ?? '•'}
-            label={SPORT_LABELS[s]}
-            active={s === sport}
-            onPress={() => setSport(s)}
-          />
-        ))}
-      </ScrollView>
-
-      {/* Scope = Segmented control. */}
-      <View style={{ paddingHorizontal: SCREEN_PADDING, marginTop: space[4] }}>
-        <Segmented
-          options={SCOPES.map((s) => ({ key: s.key, label: s.label }))}
-          value={scope}
-          onChange={(next) => {
-            // If the user has no school, flipping to school/nearby will give an
-            // empty board — fine, the EmptyState below will route them to add
-            // a school. We never block the tap.
-            setScope(next);
-          }}
-        />
-      </View>
-
-      {/* Dismissible inline "Add your school" prompt — guides, never gates. */}
-      {showSchoolPrompt ? (
-        <View style={{ paddingHorizontal: SCREEN_PADDING, marginTop: space[3] }}>
-          <Card
-            tone="surface"
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: space[3],
-              paddingHorizontal: space[3],
-              paddingVertical: space[3],
-            }}
-          >
-            <AppIcon name="Target" size={16} tone="ember" />
-            <Pressable
-              onPress={() => router.push('/(tabs)/you?edit=1' as never)}
-              style={{ flex: 1 }}
-              accessibilityRole="link"
-              accessibilityLabel="Add your school to rank locally"
-            >
-              <Txt variant="bodySm" weight="semibold">
-                Add your school to rank locally →
-              </Txt>
-            </Pressable>
-            <Pressable
-              onPress={() => setSchoolPromptDismissed(true)}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Dismiss"
-            >
-              <AppIcon name="X" size={16} tone="ash" />
-            </Pressable>
-          </Card>
-        </View>
-      ) : null}
-
-      {/* Metric chips — narrowed to the current sport. */}
-      {metricsForSport.length > 0 && (
+        {/* Primary selector — metric. Empty rail collapses to a skeleton so the
+            page height doesn't jump while the catalog loads. */}
         <View style={{ marginTop: space[4] }}>
-          <TabPill
-            items={metricsForSport.map((m) => m.label)}
-            active={currentMetric?.label ?? ''}
-            onChange={(label) => {
-              const next = metricsForSport.find((m) => m.label === label);
-              if (next) setMetricKey(next.key);
-            }}
-          />
+          {metricOptions.length > 0 ? (
+            <Segmented
+              options={metricOptions}
+              value={metricKey || metricOptions[0].key}
+              onChange={setMetricKey}
+            />
+          ) : (
+            <Skeleton h={40} radius="full" />
+          )}
         </View>
-      )}
 
-      {/* Above-the-fold info cards: Your rank + Closest rival.
-          Movers card is intentionally deferred until the RPC ships weekly
-          delta data — adding a fake card here would lie to users. */}
-      {(pct != null || rival) ? (
+        {/* Secondary selector — scope + single sport filter chip. */}
         <View
           style={{
-            paddingHorizontal: SCREEN_PADDING,
-            marginTop: space[4],
+            marginTop: space[3],
             flexDirection: 'row',
-            gap: space[3],
+            alignItems: 'center',
+            gap: space[2],
           }}
         >
-          {pct != null ? (
-            <Card tone="surface" style={{ flex: 1, padding: space[3] }}>
-              <MicroLabel>YOUR RANK</MicroLabel>
-              <View style={{ marginTop: space[2] }}>
-                <Score value={`TOP ${pct}%`} size="md" tone="ember" />
-              </View>
-              <Txt variant="micro" tone="ash" style={{ marginTop: space[1] }}>
-                {scopeMeta.phrase}
-              </Txt>
-            </Card>
-          ) : null}
-          {rival ? (
-            <Card tone="surface" style={{ flex: 1, padding: space[3] }}>
-              <MicroLabel>CLOSEST RIVAL</MicroLabel>
-              <Txt
-                variant="bodyLg"
-                weight="bold"
-                numberOfLines={1}
-                style={{ marginTop: space[2] }}
-              >
-                @{rival.handle}
-              </Txt>
-              <Txt variant="micro" tone="ash" style={{ marginTop: space[1] }}>
-                {formatStatValue(rival.value, unit)}
-                {unit ? ` ${unit.toUpperCase()}` : ''} · #{rival.rank}
-              </Txt>
-            </Card>
-          ) : null}
-        </View>
-      ) : null}
-
-      {/* Verified-only toggle */}
-      <View
-        style={{
-          paddingHorizontal: SCREEN_PADDING,
-          marginTop: space[4],
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'flex-end',
-          minHeight: 44,
-        }}
-      >
-        <Pressable
-          onPress={() => {
-            Haptics.selectionAsync();
-            setVerifiedOnly((v) => !v);
-          }}
-          accessibilityRole="switch"
-          accessibilityState={{ checked: verifiedOnly }}
-          accessibilityLabel="Show verified marks only"
-          hitSlop={8}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: 44 }}
-        >
-          <View
-            style={{
-              width: 18,
-              height: 18,
-              borderRadius: 4,
-              borderWidth: 1,
-              borderColor: colors.ink,
-              backgroundColor: verifiedOnly ? colors.ink : 'transparent',
+          <View style={{ flex: 1 }}>
+            <Segmented<Scope>
+              options={SCOPE_OPTIONS}
+              value={scope}
+              onChange={setScope}
+            />
+          </View>
+          <FilterChip
+            label={SPORT_LABELS[sport]}
+            leadingIcon="Trophy"
+            active
+            onPress={() => {
+              // Phase 2: open sport sheet. For now cycle through sports so the
+              // affordance isn't dead during review.
+              const order: Sport[] = ['football', 'basketball', 'baseball', 'track'];
+              const next = order[(order.indexOf(sport) + 1) % order.length];
+              setSport(next);
             }}
           />
-          <MicroLabel tone="ink">VERIFIED ONLY</MicroLabel>
-        </Pressable>
-      </View>
-
-      {/* Podium for top 3 — visual landing block. */}
-      {podium.length > 0 ? (
-        <View style={{ marginTop: space[4] }}>
-          <View
-            style={{
-              paddingHorizontal: SCREEN_PADDING,
-              flexDirection: 'row',
-              alignItems: 'flex-end',
-              justifyContent: 'space-between',
-              gap: space[3],
-            }}
-          >
-            {[1, 0, 2].map((idx) => {
-              const r = podium[idx];
-              if (!r) return <View key={idx} style={{ flex: 1 }} />;
-              const isFirst = idx === 0;
-              return (
-                <Pressable
-                  key={r.profile_id}
-                  onPress={() => router.push(`/player/${r.profile_id}` as never)}
-                  style={{ flex: 1, alignItems: 'center' }}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Rank ${r.rank} @${r.handle}`}
-                >
-                  <Score
-                    value={`#${r.rank}`}
-                    size="sm"
-                    tone={isFirst ? 'ember' : 'ash'}
-                  />
-                  <Txt
-                    variant="bodySm"
-                    weight={isFirst ? 'bold' : 'semibold'}
-                    numberOfLines={1}
-                    style={{ marginTop: space[1] }}
-                  >
-                    @{r.handle}
-                  </Txt>
-                  <View style={{ marginTop: space[1] }}>
-                    <Score
-                      value={formatStatValue(r.value, unit)}
-                      size={isFirst ? 'md' : 'sm'}
-                      tone={isFirst ? 'ember' : 'ink'}
-                    />
-                  </View>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-      ) : null}
-
-      <HairlineRule style={{ marginTop: space[4] }} />
-
-      {/* Sticky column header — Strava-style RANK / ATHLETE / VALUE. */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingHorizontal: SCREEN_PADDING,
-          paddingVertical: space[2],
-          backgroundColor: colors.surface,
-        }}
-      >
-        <View style={{ width: 36 }}>
-          <MicroLabel>RANK</MicroLabel>
-        </View>
-        <View style={{ flex: 1, paddingHorizontal: space[3] }}>
-          <MicroLabel>ATHLETE</MicroLabel>
-        </View>
-        <View style={{ minWidth: 84, alignItems: 'flex-end' }}>
-          <MicroLabel>{unit ? unit.toUpperCase() : 'VALUE'}</MicroLabel>
         </View>
       </View>
+
       <HairlineRule />
     </View>
   );
 
-  const renderRow = ({ item }: { item: LbRow }) => {
-    const data = toRowData(item);
-    data.value = formatStatValue(item.value, unit);
+  // ── States ────────────────────────────────────────────────────────────────
+  const renderRow = ({ item, index }: { item: LeaderboardRowData; index: number }) => {
+    const isCurrentUser = useDemoFallback
+      ? index === demoCurrentIdx
+      : rows[index]?.profile_id === myId;
+    const onPress = useDemoFallback
+      ? undefined
+      : () => router.push(`/player/${rows[index].profile_id}` as never);
     return (
       <LeaderboardRow
-        row={data}
+        row={item}
         unit={unit}
-        isCurrentUser={item.profile_id === myId}
-        onPress={() => router.push(`/player/${item.profile_id}` as never)}
+        isCurrentUser={isCurrentUser}
+        onPress={onPress}
       />
     );
   };
 
-  const pinned = pinnedMe ? (
-    <View>
-      <HairlineRule />
-      <View style={{ backgroundColor: colors.surface, paddingVertical: space[1] }}>
-        <MicroLabel style={{ paddingHorizontal: SCREEN_PADDING }}>YOU</MicroLabel>
-      </View>
-      <HairlineRule />
-      {(() => {
-        const data = toRowData(pinnedMe);
-        data.value = formatStatValue(pinnedMe.value, unit);
-        return (
-          <LeaderboardRow
-            row={data}
-            unit={unit}
-            isCurrentUser
-            onPress={() => router.push(`/player/${pinnedMe.profile_id}` as never)}
-          />
-        );
-      })()}
+  const loadingSkeleton = (
+    <View style={{ paddingTop: space[2] }}>
+      {Array.from({ length: 8 }).map((_, i) => (
+        <View
+          key={i}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: SCREEN_PADDING,
+            minHeight: 64,
+          }}
+        >
+          <Skeleton w={20} h={20} />
+          <View style={{ width: space[3] }} />
+          <Skeleton w={36} h={36} radius="full" />
+          <View style={{ flex: 1, paddingHorizontal: space[3], gap: space[1] }}>
+            <Skeleton w={120} h={14} />
+            <Skeleton w={80} h={12} />
+          </View>
+          <Skeleton w={64} h={20} />
+        </View>
+      ))}
     </View>
-  ) : null;
+  );
+
+  const errorBlock = (
+    <View
+      style={{
+        marginHorizontal: SCREEN_PADDING,
+        marginTop: space[5],
+        padding: space[4],
+        borderRadius: radius.md,
+        backgroundColor: colors.surface,
+        borderLeftWidth: 3,
+        borderLeftColor: colors.error,
+        gap: space[1],
+      }}
+      accessibilityRole="alert"
+    >
+      <Txt variant="bodySm" weight="bold">
+        Board didn’t load.
+      </Txt>
+      <Txt variant="bodySm" tone="ash">
+        Pull to retry — the leaderboard service hiccupped.
+      </Txt>
+    </View>
+  );
+
+  const emptyBlock = boardQ.isLoading ? null : boardQ.isError ? (
+    errorBlock
+  ) : scope !== 'everyone' && !hasSchool ? (
+    <EmptyState
+      icon="Target"
+      title="Pick your school to see this board."
+      body={
+        scope === 'nearby'
+          ? 'Nearby pulls from schools around yours.'
+          : 'My School ranks the kids you actually line up against.'
+      }
+      ctaLabel="PICK YOUR SCHOOL"
+      onPress={() => router.push('/(tabs)/you?edit=1' as never)}
+    />
+  ) : (
+    <EmptyState
+      icon="Trophy"
+      title="Be the first name on this board."
+      body="Drop a mark on the You tab — it lands here the second you save."
+      ctaLabel="ADD YOUR FIRST MARK"
+      onPress={() => router.push('/(tabs)/you' as never)}
+    />
+  );
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top }}>
+    <View
+      style={{ flex: 1, backgroundColor: colors.paper, paddingTop: insets.top }}
+    >
       <FlashList
-        data={rest}
-        keyExtractor={(item) => item.profile_id}
+        data={boardQ.isLoading ? [] : displayRows}
+        keyExtractor={(item, idx) => `${item.handle}-${idx}`}
         ListHeaderComponent={header}
+        stickyHeaderIndices={[0]}
         renderItem={renderRow}
-        ItemSeparatorComponent={() => <HairlineRule />}
-        ListFooterComponent={pinned}
-        ListEmptyComponent={
-          !boardQ.isLoading ? (
-            verifiedOnly ? (
-              <EmptyState
-                icon="Trophy"
-                title="No verified marks yet."
-                body="Turn off verified-only to see self-reported marks while teammates co-sign."
-                ctaLabel="SHOW ALL MARKS"
-                tone="soft"
-                onPress={() => setVerifiedOnly(false)}
-              />
-            ) : scope !== 'everyone' && !hasSchool ? (
-              <EmptyState
-                icon="Target"
-                title="Pick your school to see this board."
-                body={
-                  scope === 'nearby'
-                    ? 'Nearby pulls from schools around yours.'
-                    : 'My School ranks the kids you actually line up against.'
-                }
-                ctaLabel="PICK YOUR SCHOOL"
-                onPress={() => router.push('/(tabs)/you?edit=1' as never)}
-              />
-            ) : (
-              <EmptyState
-                icon="Trophy"
-                title="Be the first name on this board."
-                body="Drop a mark on the You tab — it lands here the second you save."
-                ctaLabel="ADD YOUR FIRST MARK"
-                onPress={() => router.push('/(tabs)/you' as never)}
-              />
-            )
-          ) : null
-        }
-        contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+        ItemSeparatorComponent={() => (
+          <View
+            style={{
+              height: 1,
+              backgroundColor: colors.fog,
+              marginLeft: SCREEN_PADDING + 36,
+            }}
+          />
+        )}
+        ListEmptyComponent={boardQ.isLoading ? loadingSkeleton : emptyBlock}
+        contentContainerStyle={{ paddingBottom: insets.bottom + space[8] }}
         showsVerticalScrollIndicator={false}
       />
     </View>
